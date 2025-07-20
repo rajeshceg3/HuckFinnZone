@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The River's Verse: A Journey with Huckleberry Finn</title>
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color-1: #E0EAFC;
+            --bg-color-2: #CFDEF3;
+            --bg-color-3: #f5b0cb;
+            --bg-color-4: #F6D365;
+
+            --text-color: #3D405B;
+            --panel-bg: rgba(255, 255, 255, 0.9);
+            --accent-color: #81B29A;
+            --shadow-color-light: rgba(0, 0, 0, 0.05);
+            --shadow-color-dark: rgba(0, 0, 0, 0.15);
+            
+            --font-heading: 'Playfair Display', serif;
+            --font-body: 'Lato', sans-serif;
+        }
+
+        /* --- Base & Body --- */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: var(--font-body);
+            color: var(--text-color);
+            background: linear-gradient(-45deg, var(--bg-color-1), var(--bg-color-2), var(--bg-color-3), var(--bg-color-4));
+            background-size: 400% 400%;
+            animation: gradientBG 30s ease infinite;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- Main App Container --- */
+        #app {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* --- Title --- */
+        #title-container {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1001;
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            animation: fadeIn 2s 0.5s forwards;
+        }
+
+        #title-container h1 {
+            font-family: var(--font-heading);
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 0;
+            color: white;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.2);
+            letter-spacing: 0.5rem;
+            text-transform: uppercase;
+        }
+        
+        #title-container h2 {
+            font-size: 1rem;
+            font-weight: 300;
+            margin: 0;
+            color: rgba(255,255,255,0.8);
+            letter-spacing: 0.2rem;
+            text-transform: uppercase;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        
+        /* --- Map Container --- */
+        #map {
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Leaflet Map Styling */
+        .leaflet-container {
+            background-color: transparent !important;
+        }
+
+        /* Custom Map Markers */
+        .journey-marker {
+            width: 20px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.7), 0 0 5px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+            animation: pulse 2.5s infinite cubic-bezier(0.66, 0, 0, 1);
+        }
+        
+        .journey-marker:hover {
+            transform: scale(1.3);
+        }
+
+        .journey-marker.active {
+            background-color: var(--accent-color);
+            border-color: white;
+            animation: none;
+            transform: scale(1.5);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+        
+        /* --- Story Panel (The Raft) --- */
+        #story-panel {
+            position: fixed;
+            top: 0;
+            right: -100%; /* Start off-screen */
+            width: 400px;
+            max-width: 90vw;
+            height: 100vh;
+            background: var(--panel-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 
+                -5px 0 15px var(--shadow-color-light),
+                -10px 0 30px var(--shadow-color-dark);
+            z-index: 1002;
+            transition: right 0.8s cubic-bezier(0.22, 1, 0.36, 1); /* Smooth, fast-out slow-in easing */
+            padding: 100px 40px 40px 40px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        
+        #story-panel.active {
+            right: 0;
+        }
+        
+        #story-panel h3 {
+            font-family: var(--font-heading);
+            font-size: 2.5rem;
+            margin: 0 0 20px 0;
+            line-height: 1.2;
+            color: var(--text-color);
+        }
+
+        #story-panel p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            font-weight: 300;
+        }
+        
+        #story-panel .quote {
+            font-style: italic;
+            border-left: 3px solid var(--accent-color);
+            padding-left: 20px;
+            margin-top: 20px;
+        }
+
+        #close-panel {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        #close-panel:hover {
+            opacity: 1;
+            transform: rotate(90deg);
+        }
+        
+        #close-panel::before, #close-panel::after {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            height: 30px;
+            width: 2px;
+            background-color: var(--text-color);
+        }
+
+        #close-panel::before {
+            transform: rotate(45deg);
+        }
+        #close-panel::after {
+            transform: rotate(-45deg);
+        }
+
+        /* --- River SVG Pattern --- */
+        #river-svg {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 15vh;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .waves {
+            position: relative;
+            width: 100%;
+            height: 15vh;
+            margin-bottom: -7px;
+        }
+
+        .parallax > use {
+            animation: move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite;
+        }
+
+        .parallax > use:nth-child(1) {
+            animation-delay: -2s;
+            animation-duration: 7s;
+        }
+        .parallax > use:nth-child(2) {
+            animation-delay: -3s;
+            animation-duration: 10s;
+        }
+        .parallax > use:nth-child(3) {
+            animation-delay: -4s;
+            animation-duration: 13s;
+        }
+        .parallax > use:nth-child(4) {
+            animation-delay: -5s;
+            animation-duration: 20s;
+        }
+
+        @keyframes move-forever {
+            0% { transform: translate3d(-90px,0,0); }
+            100% { transform: translate3d(85px,0,0); }
+        }
+
+        .leaflet-control-zoom {
+            border: 1px solid rgba(255,255,255,0.5) !important;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .leaflet-control-zoom a {
+            background-color: rgba(255,255,255,0.7) !important;
+            color: var(--text-color) !important;
+        }
+        .leaflet-control-zoom a:hover {
+             background-color: white !important;
+        }
+        .leaflet-control-attribution {
+            background: rgba(255,255,255,0.5) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <div id="title-container">
+            <h1>Huckleberry Finn</h1>
+            <h2>The River's Verse</h2>
+        </div>
+        
+        <div id="map"></div>
+
+        <div id="story-panel">
+            <div id="close-panel"></div>
+            <div id="story-content">
+                <h3 id="panel-title">The Journey Awaits</h3>
+                <p id="panel-body">Click a glowing point on the map to follow Huck's path down the Mississippi. Each light marks a pivotal moment in his quest for freedom and understanding.</p>
+            </div>
+        </div>
+
+        <div id="river-svg">
+            <svg class="waves" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+                <defs>
+                    <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
+                </defs>
+                <g class="parallax">
+                    <use xlink:href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.7" />
+                    <use xlink:href="#gentle-wave" x="48" y="3" fill="rgba(255,255,255,0.5)" />
+                    <use xlink:href="#gentle-wave" x="48" y="5" fill="rgba(255,255,255,0.3)" />
+                    <use xlink:href="#gentle-wave" x="48" y="7" fill="#fff" />
+                </g>
+            </svg>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- DATA ---
+            // Key locations in Huck Finn's journey
+            const journeyData = [
+                {
+                    lat: 38.6270, lng: -90.1994,
+                    title: "St. Petersburg",
+                    content: "The fictional starting point, representing Hannibal, Missouri. Here, Huck feels 'so lonesome I most wished I was dead,' trapped by the Widow Douglas and the constraints of 'sivilized' life. He decides to escape.",
+                    quote: "The stars were shining, and the leaves rustled in the woods ever so mournful; and I heard an owl, away off, who-whooing about somebody that was dead."
+                },
+                {
+                    lat: 38.4842, lng: -90.4143,
+                    title: "Jackson's Island",
+                    content: "Huck's first taste of true freedom. He fakes his own death and escapes to this island, expecting solitude. Instead, he finds Jim, Miss Watson's runaway slave, starting their shared journey.",
+                    quote: "I was ever so glad to see Jim. I warn't lonesome now."
+                },
+                {
+                    lat: 37.0095, lng: -89.1353,
+                    title: "Cairo & The Fog",
+                    content: "A dense fog causes Huck and Jim to miss the Ohio River at Cairo, the turnoff to the free states. This fateful accident sends them deeper into the slave-holding South, fundamentally changing their journey.",
+                    quote: "We could hear voices, but we couldn't see anything. We got separated and couldn't find each other."
+                },
+                {
+                    lat: 35.8395, lng: -90.0610,
+                    title: "The Grangerfords",
+                    content: "Huck is taken in by the aristocratic Grangerfords, who are locked in a deadly, senseless feud with the Shepherdsons. He witnesses the brutal consequences of blind tradition and honor.",
+                    quote: "There ain't no telling how cheating anybody is, or how honest, or how mean, or how good."
+                },
+                {
+                    lat: 34.4011, lng: -90.8740,
+                    title: "The Duke and the King",
+                    content: "Two con men, the 'Duke' and the 'King,' take over the raft. They represent the worst of society, swindling townsfolk along the river. Huck is forced to be their accomplice, growing increasingly disgusted by their cruelty.",
+                    quote: "It was enough to make a body ashamed of the human race."
+                },
+                {
+                    lat: 33.1593, lng: -91.2404,
+                    title: "The Wilks Scandal",
+                    content: "The Duke and King's most audacious scam: impersonating the heirs to a local family's fortune. Huck's conscience finally wins, and he acts to expose them, risking his own safety to protect the innocent Wilks sisters.",
+                    quote: "I says to myself, this is another one that I'm letting him rob her of her money... I felt so ornery and low down and mean."
+                },
+                {
+                    lat: 32.7471, lng: -91.0715,
+                    title: "The Phelps Farm",
+                    content: "The journey's climax. The King sells Jim for forty dollars. Faced with a moral crossroads, Huck makes his most important decision, defying religion and society to save his friend.",
+                    quote: "'All right, then, I'll go to hell'—and tore it up."
+                }
+            ];
+
+            // --- MAP INITIALIZATION ---
+            const map = L.map('map', {
+                scrollWheelZoom: false // Prevents accidental zoom
+            }).setView([36.0, -90.5], 6);
+
+            // Give a hint to the user
+            map.on('focus', () => map.scrollWheelZoom.enable());
+            map.on('blur', () => map.scrollWheelZoom.disable());
+
+            // Using a muted, stylish tile layer from CartoDB
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+
+            // --- UI ELEMENTS ---
+            const storyPanel = document.getElementById('story-panel');
+            const closePanelBtn = document.getElementById('close-panel');
+            const panelTitle = document.getElementById('panel-title');
+            const panelBody = document.getElementById('panel-body');
+            const markers = [];
+
+            // --- CREATE MARKERS ---
+            journeyData.forEach((point, index) => {
+                const customIcon = L.divIcon({
+                    className: 'journey-marker',
+                    iconSize: [20, 20]
+                });
+
+                const marker = L.marker([point.lat, point.lng], { icon: customIcon }).addTo(map);
+                
+                marker.on('click', () => {
+                    // Update Panel Content
+                    panelTitle.textContent = point.title;
+                    panelBody.innerHTML = `${point.content}<p class="quote">"${point.quote}"</p>`;
+                    
+                    // Show Panel
+                    storyPanel.classList.add('active');
+
+                    // Center map on marker
+                    map.flyTo([point.lat, point.lng], Math.max(map.getZoom(), 8));
+
+                    // Update active marker styling
+                    markers.forEach(m => m.getElement().classList.remove('active'));
+                    marker.getElement().classList.add('active');
+                });
+
+                markers.push(marker);
+            });
+            
+            // --- EVENT LISTENERS ---
+            const closePanel = () => {
+                storyPanel.classList.remove('active');
+                markers.forEach(m => m.getElement().classList.remove('active'));
+            };
+
+            closePanelBtn.addEventListener('click', closePanel);
+            map.on('click', closePanel);
+        });
+    </script>
+</body>
+</html>
