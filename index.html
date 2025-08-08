@@ -23,10 +23,16 @@
 
             --text-color: #3D405B;
             --panel-bg: rgba(255, 255, 255, 0.9);
-            --accent-color: #81B29A;
+            --accent-color: #81B29A; /* Original accent, keeping for panel border */
             --shadow-color-light: rgba(0, 0, 0, 0.05);
             --shadow-color-dark: rgba(0, 0, 0, 0.15);
             
+            /* New High-Contrast & Thematic Colors */
+            --marker-color: #0A9396;
+            --marker-pulse-color: #0A9396;
+            --marker-active-color: #EE9B00;
+            --marker-border-color: white;
+
             --font-heading: 'Playfair Display', serif;
             --font-body: 'Lato', sans-serif;
         }
@@ -111,10 +117,10 @@
         .journey-marker {
             width: 20px;
             height: 20px;
-            background-color: rgba(255, 255, 255, 0.5);
-            border: 2px solid white;
+            background-color: var(--marker-color);
+            border: 2px solid var(--marker-border-color);
             border-radius: 50%;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.7), 0 0 5px rgba(0,0,0,0.3);
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
             cursor: pointer;
             transition: transform 0.3s ease, background-color 0.3s ease;
             animation: pulse 2.5s infinite cubic-bezier(0.66, 0, 0, 1);
@@ -125,16 +131,22 @@
         }
 
         .journey-marker.active {
-            background-color: var(--accent-color);
-            border-color: white;
+            background-color: var(--marker-active-color);
+            border-color: var(--marker-border-color);
             animation: none;
             transform: scale(1.5);
         }
 
         @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(10, 147, 150, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 15px rgba(10, 147, 150, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(10, 147, 150, 0);
+            }
         }
         
         /* --- Story Panel (The Raft) --- */
@@ -202,6 +214,8 @@
         #close-panel:hover {
             opacity: 1;
             transform: rotate(90deg);
+            background-color: rgba(0,0,0,0.1);
+            border-radius: 50%;
         }
         
         #close-panel::before, #close-panel::after {
