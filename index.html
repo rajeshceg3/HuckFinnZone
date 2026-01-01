@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The River's Verse: A Journey with Huckleberry Finn</title>
+    <title>The River's Verse: Tactical Narrative Interface</title>
     
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -12,22 +12,28 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
+            /* Narrative Palette */
             --bg-color-1: #E0EAFC;
             --bg-color-2: #CFDEF3;
             --bg-color-3: #f5b0cb;
             --bg-color-4: #F6D365;
 
+            /* Tactical Palette */
+            --hud-bg: rgba(20, 25, 30, 0.85);
+            --hud-text: #E0E0E0;
+            --hud-accent: #0A9396;
+            --hud-warning: #EE9B00;
+            --hud-critical: #AE2012;
+            --hud-border: rgba(255, 255, 255, 0.1);
+
             --text-color: #3D405B;
-            --panel-bg: rgba(255, 255, 255, 0.9);
-            --accent-color: #81B29A; /* Original accent, keeping for panel border */
-            --shadow-color-light: rgba(0, 0, 0, 0.05);
-            --shadow-color-dark: rgba(0, 0, 0, 0.15);
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --accent-color: #81B29A;
             
-            /* New High-Contrast & Thematic Colors */
             --marker-color: #0A9396;
             --marker-pulse-color: #0A9396;
             --marker-active-color: #EE9B00;
@@ -35,6 +41,7 @@
 
             --font-heading: 'Playfair Display', serif;
             --font-body: 'Lato', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
         }
 
         /* --- Base & Body --- */
@@ -62,45 +69,10 @@
             width: 100%;
             height: 100%;
             position: relative;
+            display: grid;
+            grid-template-rows: 1fr;
         }
 
-        /* --- Title --- */
-        #title-container {
-            position: absolute;
-            top: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1001;
-            text-align: center;
-            pointer-events: none;
-            opacity: 0;
-            animation: fadeIn 2s 0.5s forwards;
-        }
-
-        #title-container h1 {
-            font-family: var(--font-heading);
-            font-size: 3rem;
-            font-weight: 700;
-            margin: 0;
-            color: white;
-            text-shadow: 0 2px 20px rgba(0,0,0,0.2);
-            letter-spacing: 0.5rem;
-            text-transform: uppercase;
-        }
-        
-        #title-container h2 {
-            font-size: 1rem;
-            font-weight: 300;
-            margin: 0;
-            color: rgba(255,255,255,0.8);
-            letter-spacing: 0.2rem;
-            text-transform: uppercase;
-        }
-
-        @keyframes fadeIn {
-            to { opacity: 1; }
-        }
-        
         /* --- Map Container --- */
         #map {
             width: 100%;
@@ -108,200 +80,241 @@
             z-index: 1;
         }
 
-        /* Leaflet Map Styling */
         .leaflet-container {
             background-color: transparent !important;
         }
 
-        /* Custom Map Markers */
+        /* --- Tactical HUD --- */
+        #hud-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none; /* Allow clicks through to map where transparent */
+        }
+
+        .hud-panel {
+            background: var(--hud-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--hud-border);
+            border-left: 3px solid var(--hud-accent);
+            padding: 15px;
+            color: var(--hud-text);
+            font-family: var(--font-mono);
+            min-width: 250px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            pointer-events: auto;
+            transform: translateX(-120%);
+            animation: slideInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 0.5s;
+        }
+
+        @keyframes slideInLeft {
+            to { transform: translateX(0); }
+        }
+
+        .hud-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .hud-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--hud-accent);
+            box-shadow: 0 0 5px var(--hud-accent);
+            margin-right: 8px;
+        }
+        
+        .status-critical { background-color: var(--hud-critical); box-shadow: 0 0 5px var(--hud-critical); }
+        .status-warning { background-color: var(--hud-warning); box-shadow: 0 0 5px var(--hud-warning); }
+
+        /* --- Timeline Control --- */
+        #timeline-control {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(150%);
+            width: 80%;
+            max-width: 800px;
+            z-index: 1000;
+            background: var(--hud-bg);
+            backdrop-filter: blur(10px);
+            padding: 15px 25px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: 1s;
+        }
+
+        @keyframes slideUp {
+            to { transform: translateX(-50%) translateY(0); }
+        }
+
+        #play-pause-btn {
+            background: transparent;
+            border: 2px solid var(--hud-accent);
+            color: var(--hud-accent);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        #play-pause-btn:hover {
+            background: var(--hud-accent);
+            color: #fff;
+        }
+
+        #timeline-slider-container {
+            flex-grow: 1;
+            position: relative;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        #timeline-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background: var(--hud-accent);
+            border-radius: 3px;
+            transition: width 0.1s linear;
+        }
+
+        /* --- Map Markers & Path --- */
         .journey-marker {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             background-color: var(--marker-color);
             border: 2px solid var(--marker-border-color);
             border-radius: 50%;
             box-shadow: 0 0 5px rgba(0,0,0,0.3);
             cursor: pointer;
             transition: transform 0.3s ease, background-color 0.3s ease;
-            animation: pulse 2.5s infinite cubic-bezier(0.66, 0, 0, 1);
         }
         
-        .journey-marker:hover {
-            transform: scale(1.3);
-        }
-
+        .journey-marker:hover { transform: scale(1.3); }
         .journey-marker.active {
             background-color: var(--marker-active-color);
-            border-color: var(--marker-border-color);
-            animation: none;
             transform: scale(1.5);
+            box-shadow: 0 0 15px var(--marker-active-color);
         }
 
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(10, 147, 150, 0.7);
-            }
-            70% {
-                box-shadow: 0 0 0 15px rgba(10, 147, 150, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(10, 147, 150, 0);
-            }
-        }
-        
-        /* --- Story Panel (The Raft) --- */
+        /* --- Story Panel --- */
         #story-panel {
             position: fixed;
             top: 0;
-            right: -100%; /* Start off-screen */
+            right: -100%;
             width: 400px;
             max-width: 90vw;
             height: 100vh;
             background: var(--panel-bg);
             backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            box-shadow: 
-                -5px 0 15px var(--shadow-color-light),
-                -10px 0 30px var(--shadow-color-dark);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1);
             z-index: 1002;
-            transition: right 0.8s cubic-bezier(0.22, 1, 0.36, 1); /* Smooth, fast-out slow-in easing */
-            padding: 100px 40px 40px 40px;
+            transition: right 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+            padding: 80px 40px 40px 40px;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
         }
         
-        #story-panel.active {
-            right: 0;
-        }
+        #story-panel.active { right: 0; }
         
         #story-panel h3 {
             font-family: var(--font-heading);
-            font-size: 2.5rem;
-            margin: 0 0 20px 0;
-            line-height: 1.2;
+            font-size: 2rem;
+            margin: 0 0 15px 0;
             color: var(--text-color);
-        }
-
-        #story-panel p {
-            font-size: 1.1rem;
-            line-height: 1.8;
-            font-weight: 300;
-        }
-        
-        #story-panel .quote {
-            font-style: italic;
-            border-left: 3px solid var(--accent-color);
-            padding-left: 20px;
-            margin-top: 20px;
         }
 
         #close-panel {
             position: absolute;
-            top: 40px;
-            right: 40px;
+            top: 30px;
+            right: 30px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
             width: 30px;
             height: 30px;
-            cursor: pointer;
-            opacity: 0.7;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-    background: transparent;
-    border: none;
-    padding: 0;
+            opacity: 0.6;
+            transition: opacity 0.3s;
         }
-
-        #close-panel:hover {
-            opacity: 1;
-            transform: rotate(90deg);
-            background-color: rgba(0,0,0,0.1);
-            border-radius: 50%;
-        }
-        
+        #close-panel:hover { opacity: 1; }
         #close-panel::before, #close-panel::after {
             content: '';
             position: absolute;
-            left: 15px;
-            top: 0;
-            height: 30px;
+            left: 14px;
+            top: 5px;
+            height: 20px;
             width: 2px;
-            background-color: var(--text-color);
+            background: var(--text-color);
         }
+        #close-panel::before { transform: rotate(45deg); }
+        #close-panel::after { transform: rotate(-45deg); }
 
-        #close-panel::before {
-            transform: rotate(45deg);
-        }
-        #close-panel::after {
-            transform: rotate(-45deg);
-        }
-
-        /* --- River SVG Pattern --- */
+        /* --- SVG --- */
         #river-svg {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
-            height: 15vh;
+            height: 10vh;
             z-index: 2;
             pointer-events: none;
         }
-
-        .waves {
-            position: relative;
-            width: 100%;
-            height: 15vh;
-            margin-bottom: -7px;
-        }
-
-        .parallax > use {
-            animation: move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite;
-        }
-
-        .parallax > use:nth-child(1) {
-            animation-delay: -2s;
-            animation-duration: 7s;
-        }
-        .parallax > use:nth-child(2) {
-            animation-delay: -3s;
-            animation-duration: 10s;
-        }
-        .parallax > use:nth-child(3) {
-            animation-delay: -4s;
-            animation-duration: 13s;
-        }
-        .parallax > use:nth-child(4) {
-            animation-delay: -5s;
-            animation-duration: 20s;
-        }
-
+        .parallax > use { animation: move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite; }
         @keyframes move-forever {
             0% { transform: translate3d(-90px,0,0); }
             100% { transform: translate3d(85px,0,0); }
         }
 
-        .leaflet-control-zoom {
-            border: 1px solid rgba(255,255,255,0.5) !important;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        .leaflet-control-zoom a {
-            background-color: rgba(255,255,255,0.7) !important;
-            color: var(--text-color) !important;
-        }
-        .leaflet-control-zoom a:hover {
-             background-color: white !important;
-        }
-        .leaflet-control-attribution {
-            background: rgba(255,255,255,0.5) !important;
-        }
-
-        /* --- Accessibility: Reduced Motion --- */
-        @media (prefers-reduced-motion: reduce) {
-            html, body, #title-container, .journey-marker, .parallax > use {
-                animation: none !important;
-                transition: none !important;
+        /* Responsive */
+        @media (max-width: 600px) {
+            #timeline-control {
+                width: 90%;
+                bottom: 20px;
             }
-            #title-container {
-                opacity: 1; /* Ensure title is visible without fade-in */
+            .hud-panel {
+                min-width: auto;
+                width: auto;
+                font-size: 0.8rem;
+            }
+            #story-panel {
+                width: 100%;
             }
         }
     </style>
@@ -309,26 +322,51 @@
 <body>
 
     <div id="app">
-        <div id="title-container">
-            <h1>Huckleberry Finn</h1>
-            <h2>The River's Verse</h2>
-        </div>
         
-        <div id="map"></div>
-
-        <div id="story-panel">
-            <button id="close-panel" aria-label="Close story panel"></button>
-            <div id="story-content">
-                <h3 id="panel-title">The Journey Awaits</h3>
-                <div id="panel-body">
-                    <p>Click a glowing point on the map to follow Huck's path down the Mississippi. Each light marks a pivotal moment in his quest for freedom and understanding.</p>
+        <!-- HUD Overlay -->
+        <div id="hud-overlay">
+            <div class="hud-panel">
+                <div class="hud-title">Mission Phase</div>
+                <div class="hud-value" id="hud-phase">Awaiting Input</div>
+            </div>
+            <div class="hud-panel">
+                <div class="hud-title">Operational Status</div>
+                <div class="hud-row">
+                    <span id="hud-status-text">Standby</span>
+                    <div id="hud-status-light" class="status-indicator"></div>
                 </div>
+            </div>
+            <div class="hud-panel">
+                <div class="hud-title">Distance</div>
+                <div class="hud-value"><span id="hud-distance">0</span> mi</div>
             </div>
         </div>
 
+        <!-- Map -->
+        <div id="map"></div>
+
+        <!-- Timeline Control -->
+        <div id="timeline-control">
+            <button id="play-pause-btn" aria-label="Play Mission">
+                <svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L13 9L1 17V1Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div id="timeline-slider-container">
+                <div id="timeline-progress"></div>
+            </div>
+        </div>
+
+        <!-- Story Panel -->
+        <div id="story-panel">
+            <button id="close-panel" aria-label="Close panel"></button>
+            <h3 id="panel-title"></h3>
+            <div id="panel-body"></div>
+        </div>
+
+        <!-- Decor -->
         <div id="river-svg">
-            <svg class="waves" xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+            <svg class="waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
                 <defs>
                     <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
                 </defs>
@@ -343,153 +381,392 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // --- DATA ---
-            // Key locations in Huck Finn's journey
-            const journeyData = [
-                {
-                    lat: 38.6270, lng: -90.1994,
-                    title: "St. Petersburg",
-                    content: "The fictional starting point, representing Hannibal, Missouri. Here, Huck feels 'so lonesome I most wished I was dead,' trapped by the Widow Douglas and the constraints of 'sivilized' life. He decides to escape.",
-                    quote: "The stars were shining, and the leaves rustled in the woods ever so mournful; and I heard an owl, away off, who-whooing about somebody that was dead."
-                },
-                {
-                    lat: 38.4842, lng: -90.4143,
-                    title: "Jackson's Island",
-                    content: "Huck's first taste of true freedom. He fakes his own death and escapes to this island, expecting solitude. Instead, he finds Jim, Miss Watson's runaway slave, starting their shared journey.",
-                    quote: "I was ever so glad to see Jim. I warn't lonesome now."
-                },
-                {
-                    lat: 37.0095, lng: -89.1353,
-                    title: "Cairo & The Fog",
-                    content: "A dense fog causes Huck and Jim to miss the Ohio River at Cairo, the turnoff to the free states. This fateful accident sends them deeper into the slave-holding South, fundamentally changing their journey.",
-                    quote: "We could hear voices, but we couldn't see anything. We got separated and couldn't find each other."
-                },
-                {
-                    lat: 35.8395, lng: -90.0610,
-                    title: "The Grangerfords",
-                    content: "Huck is taken in by the aristocratic Grangerfords, who are locked in a deadly, senseless feud with the Shepherdsons. He witnesses the brutal consequences of blind tradition and honor.",
-                    quote: "There ain't no telling how cheating anybody is, or how honest, or how mean, or how good."
-                },
-                {
-                    lat: 34.4011, lng: -90.8740,
-                    title: "The Duke and the King",
-                    content: "Two con men, the 'Duke' and the 'King,' take over the raft. They represent the worst of society, swindling townsfolk along the river. Huck is forced to be their accomplice, growing increasingly disgusted by their cruelty.",
-                    quote: "It was enough to make a body ashamed of the human race."
-                },
-                {
-                    lat: 33.1593, lng: -91.2404,
-                    title: "The Wilks Scandal",
-                    content: "The Duke and King's most audacious scam: impersonating the heirs to a local family's fortune. Huck's conscience finally wins, and he acts to expose them, risking his own safety to protect the innocent Wilks sisters.",
-                    quote: "I says to myself, this is another one that I'm letting him rob her of her money... I felt so ornery and low down and mean."
-                },
-                {
-                    lat: 32.7471, lng: -91.0715,
-                    title: "The Phelps Farm",
-                    content: "The journey's climax. The King sells Jim for forty dollars. Faced with a moral crossroads, Huck makes his most important decision, defying religion and society to save his friend.",
-                    quote: "'All right, then, I'll go to hell'—and tore it up."
-                }
-            ];
+        /**
+         * The River's Verse - Tactical Narrative Interface
+         * Modular Architecture
+         */
 
-            // --- MAP INITIALIZATION ---
-            const map = L.map('map', {
-                scrollWheelZoom: false // Prevents accidental zoom
-            }).setView([36.0, -90.5], 6);
+        // --- Configuration & Data ---
+        const CONFIG = {
+            animationSpeed: 5000, // Time to play through full journey in ms (base speed)
+            zoomLevel: 7
+        };
 
-            // Give a hint to the user
-            map.on('focus', () => map.scrollWheelZoom.enable());
-            map.on('blur', () => map.scrollWheelZoom.disable());
+        const JOURNEY_DATA = [
+            {
+                id: 'st-petersburg',
+                lat: 38.6270, lng: -90.1994,
+                title: "St. Petersburg",
+                content: "The fictional starting point, representing Hannibal, Missouri. Here, Huck feels 'so lonesome I most wished I was dead,' trapped by the Widow Douglas and the constraints of 'sivilized' life.",
+                quote: "The stars were shining, and the leaves rustled in the woods ever so mournful.",
+                phase: "Extraction",
+                risk: "Low",
+                mile: 0
+            },
+            {
+                id: 'jacksons-island',
+                lat: 38.4842, lng: -90.4143,
+                title: "Jackson's Island",
+                content: "Huck's first taste of true freedom. He fakes his own death and escapes to this island. Instead of solitude, he finds Jim, Miss Watson's runaway slave.",
+                quote: "I was ever so glad to see Jim. I warn't lonesome now.",
+                phase: "Evasion",
+                risk: "Medium",
+                mile: 15
+            },
+            {
+                id: 'cairo',
+                lat: 37.0095, lng: -89.1353,
+                title: "Cairo & The Fog",
+                content: "A dense fog causes Huck and Jim to miss the Ohio River at Cairo, the turnoff to the free states. This fateful accident sends them deeper into the slave-holding South.",
+                quote: "We could hear voices, but we couldn't see anything. We got separated.",
+                phase: "Navigation",
+                risk: "High",
+                mile: 120
+            },
+            {
+                id: 'grangerfords',
+                lat: 35.8395, lng: -90.0610,
+                title: "The Grangerfords",
+                content: "Huck is taken in by the aristocratic Grangerfords, who are locked in a deadly, senseless feud with the Shepherdsons.",
+                quote: "There ain't no telling how cheating anybody is, or how honest, or how mean.",
+                phase: "Conflict",
+                risk: "Critical",
+                mile: 250
+            },
+            {
+                id: 'duke-king',
+                lat: 34.4011, lng: -90.8740,
+                title: "The Duke and the King",
+                content: "Two con men take over the raft. They represent the worst of society, swindling townsfolk along the river. Huck is forced to be their accomplice.",
+                quote: "It was enough to make a body ashamed of the human race.",
+                phase: "Infiltration",
+                risk: "High",
+                mile: 350
+            },
+            {
+                id: 'wilks',
+                lat: 33.1593, lng: -91.2404,
+                title: "The Wilks Scandal",
+                content: "The Duke and King's most audacious scam: impersonating the heirs to a local family's fortune. Huck's conscience finally wins, and he acts to expose them.",
+                quote: "I says to myself, this is another one that I'm letting him rob her of her money.",
+                phase: "Deception",
+                risk: "High",
+                mile: 480
+            },
+            {
+                id: 'phelps',
+                lat: 32.7471, lng: -91.0715,
+                title: "The Phelps Farm",
+                content: "The journey's climax. The King sells Jim. Huck decides to defy religion and society to save his friend, finalizing his moral transformation.",
+                quote: "'All right, then, I'll go to hell'—and tore it up.",
+                phase: "Climax",
+                risk: "Critical",
+                mile: 600
+            }
+        ];
 
-            // Using a muted, stylish tile layer from CartoDB
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
-            }).addTo(map);
+        // --- Modules ---
 
-            // --- UI ELEMENTS ---
-            const storyPanel = document.getElementById('story-panel');
-            const closePanelBtn = document.getElementById('close-panel');
-            const panelTitle = document.getElementById('panel-title');
-            const panelBody = document.getElementById('panel-body');
-            const markers = [];
+        /**
+         * Manages the data and calculates interpolations
+         */
+        class IntelSystem {
+            constructor(data) {
+                this.data = data;
+                this.totalDistance = data[data.length - 1].mile;
+            }
 
-            // --- CREATE MARKERS ---
-            journeyData.forEach((point, index) => {
-                const customIcon = L.divIcon({
-                    className: 'journey-marker',
-                    iconSize: [20, 20]
-                });
+            getPoints() {
+                return this.data;
+            }
 
-                const marker = L.marker([point.lat, point.lng], { icon: customIcon }).addTo(map);
+            // Get the active segment based on progress (0.0 to 1.0)
+            getDataAtProgress(progress) {
+                const targetMile = progress * this.totalDistance;
 
-                // Make marker accessible for keyboard navigation and screen readers
-                const markerElement = marker.getElement();
-                if (markerElement) {
-                    markerElement.tabIndex = 0;
-                    markerElement.setAttribute('role', 'button');
-                    markerElement.setAttribute('aria-label', `View details for ${point.title}`);
-                }
+                // Find the segment we are in
+                let currentPoint = this.data[0];
+                let nextPoint = this.data[1];
+                let index = 0;
 
-                // Extracted function to handle opening the panel for a marker
-                const openPanelForMarker = (event) => {
-                    // Stop the click event from propagating to the map, which would otherwise trigger the closePanel handler.
-                    if (event) {
-                        L.DomEvent.stopPropagation(event);
+                for (let i = 0; i < this.data.length - 1; i++) {
+                    if (targetMile >= this.data[i].mile && targetMile <= this.data[i+1].mile) {
+                        currentPoint = this.data[i];
+                        nextPoint = this.data[i+1];
+                        index = i;
+                        break;
                     }
+                }
 
-                    // Update Panel Content
-                    panelTitle.textContent = point.title;
+                // If we are past the last point
+                if (progress >= 1) {
+                    currentPoint = this.data[this.data.length - 1];
+                    nextPoint = currentPoint;
+                    index = this.data.length - 1;
+                }
 
-                    // Securely update panel body by creating elements instead of using innerHTML
-                    panelBody.innerHTML = ''; // Clear existing content
-                    const contentP = document.createElement('p');
-                    contentP.textContent = point.content;
+                return { currentPoint, nextPoint, index, targetMile };
+            }
+        }
 
-                    const quoteP = document.createElement('p');
-                    quoteP.className = 'quote';
-                    quoteP.textContent = `"${point.quote}"`;
+        /**
+         * Manages the Map, Markers, and Vectors
+         */
+        class TacticalMap {
+            constructor(elementId, initialLat, initialLng) {
+                this.map = L.map(elementId, {
+                    zoomControl: false,
+                    scrollWheelZoom: false,
+                    attributionControl: false
+                }).setView([initialLat, initialLng], CONFIG.zoomLevel);
 
-                    panelBody.appendChild(contentP);
-                    panelBody.appendChild(quoteP);
-                    
-                    // Show Panel
-                    storyPanel.classList.add('active');
+                // Add attribution manually in a cleaner way if needed, or stick to default
+                L.control.attribution({position: 'bottomright'}).addTo(this.map);
 
-                    // Center map on marker
-                    map.flyTo([point.lat, point.lng], Math.max(map.getZoom(), 8));
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19
+                }).addTo(this.map);
 
-                    // Update active marker styling
-                    markers.forEach(m => {
-                        const el = m.getElement();
-                        if (el) el.classList.remove('active');
+                this.markers = [];
+                this.routeLine = null;
+            }
+
+            renderMarkers(data, onMarkerClick) {
+                data.forEach((point) => {
+                    const icon = L.divIcon({
+                        className: 'journey-marker',
+                        iconSize: [16, 16]
                     });
-                    if (markerElement) {
-                        markerElement.classList.add('active');
+                    
+                    const marker = L.marker([point.lat, point.lng], { icon: icon })
+                        .addTo(this.map);
+
+                    // Add accessibility features
+                    const el = marker.getElement();
+                    if (el) {
+                        el.setAttribute('tabindex', '0');
+                        el.setAttribute('role', 'button');
+                        el.setAttribute('aria-label', `Select ${point.title}`);
+
+                        el.addEventListener('click', () => onMarkerClick(point));
+                        el.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                onMarkerClick(point);
+                            }
+                        });
                     }
+
+                    marker.pointId = point.id;
+                    this.markers.push(marker);
+                });
+            }
+
+            renderRoute(data) {
+                const latlngs = data.map(d => [d.lat, d.lng]);
+                this.routeLine = L.polyline(latlngs, {
+                    color: 'var(--hud-accent)',
+                    weight: 2,
+                    opacity: 0.6,
+                    dashArray: '5, 10',
+                    lineCap: 'round'
+                }).addTo(this.map);
+            }
+
+            highlightMarker(index) {
+                this.markers.forEach((marker, i) => {
+                    const el = marker.getElement();
+                    if (el) {
+                        if (i === index) {
+                            el.classList.add('active');
+                        } else {
+                            el.classList.remove('active');
+                        }
+                    }
+                });
+            }
+
+            panTo(lat, lng) {
+                this.map.flyTo([lat, lng], CONFIG.zoomLevel, {
+                    animate: true,
+                    duration: 1.5
+                });
+            }
+        }
+
+        /**
+         * Manages the Heads-Up Display and Story Panel
+         */
+        class HUDInterface {
+            constructor() {
+                this.els = {
+                    phase: document.getElementById('hud-phase'),
+                    statusText: document.getElementById('hud-status-text'),
+                    statusLight: document.getElementById('hud-status-light'),
+                    distance: document.getElementById('hud-distance'),
+                    storyPanel: document.getElementById('story-panel'),
+                    panelTitle: document.getElementById('panel-title'),
+                    panelBody: document.getElementById('panel-body'),
+                    closeBtn: document.getElementById('close-panel'),
+                    playBtn: document.getElementById('play-pause-btn'),
+                    progress: document.getElementById('timeline-progress'),
+                    sliderContainer: document.getElementById('timeline-slider-container')
                 };
 
-                marker.on('click', openPanelForMarker);
+                this.els.closeBtn.addEventListener('click', () => this.hideStory());
+            }
 
-                marker.on('keydown', (e) => {
-                    if (e.originalEvent.key === 'Enter' || e.originalEvent.key === ' ') {
-                        // Trigger the same logic as a click for keyboard users
-                        openPanelForMarker(null);
-                    }
+            updateStatus(point) {
+                this.els.phase.textContent = point.phase;
+                this.els.distance.textContent = point.mile;
+                this.els.statusText.textContent = point.risk;
+
+                // Update risk light
+                this.els.statusLight.className = 'status-indicator';
+                if (point.risk === 'Critical') this.els.statusLight.classList.add('status-critical');
+                if (point.risk === 'High') this.els.statusLight.classList.add('status-warning');
+            }
+
+            updateProgress(percent) {
+                this.els.progress.style.width = `${percent * 100}%`;
+            }
+
+            setPlayState(isPlaying) {
+                this.els.playBtn.innerHTML = isPlaying
+                    ? '<svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor"><rect width="4" height="16" x="1" y="1" rx="1"/><rect width="4" height="16" x="9" y="1" rx="1"/></svg>'
+                    : '<svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor"><path d="M1 1L13 9L1 17V1Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+            }
+
+            showStory(point) {
+                this.els.panelTitle.textContent = point.title;
+                this.els.panelBody.innerHTML = `
+                    <p>${point.content}</p>
+                    <p style="font-style: italic; border-left: 2px solid var(--accent-color); padding-left: 15px; margin-top: 20px;">
+                        "${point.quote}"
+                    </p>
+                `;
+                this.els.storyPanel.classList.add('active');
+            }
+
+            hideStory() {
+                this.els.storyPanel.classList.remove('active');
+            }
+        }
+
+        /**
+         * Main Application Controller
+         */
+        class MissionControl {
+            constructor() {
+                this.intel = new IntelSystem(JOURNEY_DATA);
+                this.map = new TacticalMap('map', 36.0, -90.5);
+                this.hud = new HUDInterface();
+
+                this.state = {
+                    progress: 0, // 0.0 to 1.0
+                    isPlaying: false,
+                    lastFrameTime: 0,
+                    currentIndex: -1
+                };
+
+                this.init();
+            }
+
+            init() {
+                // Render Map Elements
+                this.map.renderMarkers(this.intel.getPoints(), (point) => this.handleMarkerClick(point));
+                this.map.renderRoute(this.intel.getPoints());
+
+                // Setup Listeners
+                this.hud.els.playBtn.addEventListener('click', () => this.togglePlayback());
+
+                // Timeline Interaction
+                this.hud.els.sliderContainer.addEventListener('click', (e) => {
+                    const rect = this.hud.els.sliderContainer.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const pct = Math.max(0, Math.min(1, x / rect.width));
+                    this.seek(pct);
                 });
 
-                markers.push(marker);
-            });
-            
-            // --- EVENT LISTENERS ---
-            const closePanel = () => {
-                storyPanel.classList.remove('active');
-                markers.forEach(m => m.getElement().classList.remove('active'));
-            };
+                // Start Loop
+                requestAnimationFrame((t) => this.loop(t));
 
-            closePanelBtn.addEventListener('click', closePanel);
-            map.on('click', closePanel);
+                // Initial State
+                this.updateMissionData(0);
+            }
+
+            handleMarkerClick(point) {
+                // Pause if playing
+                if (this.state.isPlaying) this.togglePlayback();
+
+                // Jump to that point based on mileage
+                const pct = point.mile / this.intel.totalDistance;
+                this.seek(pct);
+
+                this.hud.showStory(point);
+            }
+
+            togglePlayback() {
+                this.state.isPlaying = !this.state.isPlaying;
+                this.hud.setPlayState(this.state.isPlaying);
+                if (this.state.isPlaying && this.state.progress >= 1) {
+                    this.state.progress = 0; // Restart if at end
+                }
+            }
+
+            seek(pct) {
+                this.state.progress = pct;
+                this.updateMissionData(pct);
+            }
+
+            loop(timestamp) {
+                if (!this.state.lastFrameTime) this.state.lastFrameTime = timestamp;
+                const deltaTime = timestamp - this.state.lastFrameTime;
+                this.state.lastFrameTime = timestamp;
+
+                if (this.state.isPlaying) {
+                    // Calculate increment based on duration
+                    // duration should be around 15 seconds for full scroll
+                    const duration = 15000;
+                    const increment = deltaTime / duration;
+
+                    this.state.progress += increment;
+
+                    if (this.state.progress >= 1) {
+                        this.state.progress = 1;
+                        this.togglePlayback();
+                    }
+
+                    this.updateMissionData(this.state.progress);
+                }
+
+                requestAnimationFrame((t) => this.loop(t));
+            }
+
+            updateMissionData(progress) {
+                this.hud.updateProgress(progress);
+
+                const { currentPoint, index } = this.intel.getDataAtProgress(progress);
+
+                // Only update DOM if index changed or it's the first run
+                if (index !== this.state.currentIndex) {
+                    this.state.currentIndex = index;
+                    this.hud.updateStatus(currentPoint);
+                    this.map.highlightMarker(index);
+
+                    // Auto-pan map if playing
+                    if (this.state.isPlaying) {
+                         this.map.panTo(currentPoint.lat, currentPoint.lng);
+                    }
+                }
+            }
+        }
+
+        // Initialize Mission
+        document.addEventListener('DOMContentLoaded', () => {
+            const mission = new MissionControl();
         });
+
     </script>
 </body>
 </html>
