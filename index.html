@@ -200,6 +200,11 @@
             background: rgba(255,255,255,0.1);
             border-radius: 3px;
             cursor: pointer;
+            outline: none;
+        }
+
+        #timeline-slider-container:focus {
+            box-shadow: 0 0 0 2px var(--hud-accent);
         }
 
         #timeline-progress {
@@ -210,7 +215,7 @@
             width: 0%;
             background: var(--hud-accent);
             border-radius: 3px;
-            transition: width 0.1s linear;
+            /* removed transition for smoother dragging */
         }
 
         /* --- Map Markers & Path --- */
@@ -474,7 +479,7 @@
                     <path d="M1 1L13 9L1 17V1Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                 </svg>
             </button>
-            <div id="timeline-slider-container">
+            <div id="timeline-slider-container" role="slider" tabindex="0" aria-label="Timeline Control" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                 <div id="timeline-progress"></div>
             </div>
         </div>
@@ -628,12 +633,19 @@
                 let currentPoint = this.data[0];
                 let nextPoint = this.data[1];
                 let index = 0;
+                let segmentProgress = 0;
 
                 for (let i = 0; i < this.data.length - 1; i++) {
                     if (targetMile >= this.data[i].mile && targetMile <= this.data[i+1].mile) {
                         currentPoint = this.data[i];
                         nextPoint = this.data[i+1];
                         index = i;
+
+                        // Calculate progress within this segment (0.0 to 1.0)
+                        const segmentDist = this.data[i+1].mile - this.data[i].mile;
+                        if (segmentDist > 0) {
+                            segmentProgress = (targetMile - this.data[i].mile) / segmentDist;
+                        }
                         break;
                     }
                 }
@@ -643,9 +655,14 @@
                     currentPoint = this.data[this.data.length - 1];
                     nextPoint = currentPoint;
                     index = this.data.length - 1;
+                    segmentProgress = 1;
                 }
 
-                return { currentPoint, nextPoint, index, targetMile };
+                // Interpolate Lat/Lng
+                const lat = currentPoint.lat + (nextPoint.lat - currentPoint.lat) * segmentProgress;
+                const lng = currentPoint.lng + (nextPoint.lng - currentPoint.lng) * segmentProgress;
+
+                return { currentPoint, nextPoint, index, targetMile, interpolated: { lat, lng } };
             }
         }
 
@@ -726,11 +743,15 @@
                 });
             }
 
-            panTo(lat, lng) {
-                this.map.flyTo([lat, lng], CONFIG.zoomLevel, {
-                    animate: true,
-                    duration: 1.5
-                });
+            panTo(lat, lng, immediate = false) {
+                if (immediate) {
+                    this.map.setView([lat, lng], CONFIG.zoomLevel, { animate: false });
+                } else {
+                    this.map.flyTo([lat, lng], CONFIG.zoomLevel, {
+                        animate: true,
+                        duration: 1.5
+                    });
+                }
             }
         }
 
@@ -769,6 +790,7 @@
 
             updateProgress(percent) {
                 this.els.progress.style.width = `${percent * 100}%`;
+                this.els.sliderContainer.setAttribute('aria-valuenow', Math.round(percent * 100));
             }
 
             setPlayState(isPlaying) {
@@ -997,13 +1019,8 @@
                 // Setup Listeners
                 this.hud.els.playBtn.addEventListener('click', () => this.togglePlayback());
 
-                // Timeline Interaction
-                this.hud.els.sliderContainer.addEventListener('click', (e) => {
-                    const rect = this.hud.els.sliderContainer.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const pct = Math.max(0, Math.min(1, x / rect.width));
-                    this.seek(pct);
-                });
+                // Timeline Interaction (Click, Drag, Keyboard)
+                this.setupTimelineInteraction();
 
                 // Start Loop
                 requestAnimationFrame((t) => this.loop(t));
@@ -1029,6 +1046,52 @@
                 if (this.state.isPlaying && this.state.progress >= 1) {
                     this.state.progress = 0; // Restart if at end
                 }
+            }
+
+            setupTimelineInteraction() {
+                const slider = this.hud.els.sliderContainer;
+                let isDragging = false;
+
+                // Mouse/Touch Handling
+                const updateFromEvent = (clientX) => {
+                    const rect = slider.getBoundingClientRect();
+                    const x = clientX - rect.left;
+                    const pct = Math.max(0, Math.min(1, x / rect.width));
+                    this.seek(pct);
+                };
+
+                slider.addEventListener('mousedown', (e) => {
+                    isDragging = true;
+                    updateFromEvent(e.clientX);
+                    // If playing, maybe pause or just let it update?
+                    // Let's pause while dragging for better UX, or just seek.
+                    // If we pause, we need to resume after. Let's just seek for now.
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (isDragging) {
+                        e.preventDefault();
+                        updateFromEvent(e.clientX);
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+
+                // Keyboard Handling
+                slider.addEventListener('keydown', (e) => {
+                    const STEP = 0.05; // 5% jump
+                    let newProgress = this.state.progress;
+
+                    if (e.key === 'ArrowRight') {
+                        newProgress = Math.min(1, this.state.progress + STEP);
+                        this.seek(newProgress);
+                    } else if (e.key === 'ArrowLeft') {
+                        newProgress = Math.max(0, this.state.progress - STEP);
+                        this.seek(newProgress);
+                    }
+                });
             }
 
             seek(pct) {
@@ -1063,18 +1126,21 @@
             updateMissionData(progress) {
                 this.hud.updateProgress(progress);
 
-                const { currentPoint, index } = this.intel.getDataAtProgress(progress);
+                const { currentPoint, index, interpolated } = this.intel.getDataAtProgress(progress);
 
-                // Only update DOM if index changed or it's the first run
+                // Update Status & Highlight when passing markers
                 if (index !== this.state.currentIndex) {
                     this.state.currentIndex = index;
                     this.hud.updateStatus(currentPoint);
                     this.map.highlightMarker(index);
+                }
 
-                    // Auto-pan map if playing
-                    if (this.state.isPlaying) {
-                         this.map.panTo(currentPoint.lat, currentPoint.lng);
-                    }
+                // Smoothly pan map if playing
+                if (this.state.isPlaying && interpolated) {
+                    this.map.panTo(interpolated.lat, interpolated.lng, true);
+                } else if (!this.state.isPlaying && index !== this.state.currentIndex) {
+                    // Snap to marker if not playing (seeking)
+                    this.map.panTo(currentPoint.lat, currentPoint.lng);
                 }
             }
         }
