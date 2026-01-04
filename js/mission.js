@@ -3,6 +3,7 @@ import IntelSystem from './intel.js';
 import TacticalMap from './map.js';
 import HUDInterface from './hud.js';
 import CommandTerminal from './terminal.js';
+import TacticalAnalytics from './analytics.js';
 
 /**
  * Main Application Controller
@@ -16,6 +17,7 @@ class MissionControl {
         this.map = new TacticalMap('map', 36.0, -90.5);
         this.hud = new HUDInterface();
         this.terminal = new CommandTerminal(this);
+        this.analytics = new TacticalAnalytics();
 
         this.state = {
             progress: 0, // 0.0 to 1.0
@@ -54,6 +56,10 @@ class MissionControl {
         // Only clear active layers (route and markers), preserving ghosts
         this.map.clearActiveLayers();
         this.map.renderMarkers(this.intel.getPoints(), (point) => this.handleMarkerClick(point));
+        // Note: For FoW, we don't render the full route initially.
+        // But we might want to render what we know so far.
+        // For simplicity, renderRoute will handle the "base" empty line,
+        // and loop() will update it.
         this.map.renderRoute(this.intel.getPoints());
     }
 
@@ -67,6 +73,8 @@ class MissionControl {
         // For now, hardcoded logic for the Cairo decision
         if (decision.targetId === 'ohio-river') {
             // Save current path as ghost before switching
+            // For FoW: Ghost path should probably be the *full* old path
+            // OR just the explored part. Let's show full old path as "Alternate History"
             this.map.renderGhostPath(this.intel.getPoints());
 
             // Switch to Freedom Path
@@ -100,6 +108,11 @@ class MissionControl {
 
         // 3. Refresh Map Visuals
         this.refreshMap();
+
+        // Reset analytics relative to new path
+        // this.analytics.reset(); // Actually, don't reset fully, pursuit continues?
+        // Let's keep pursuit but maybe adjust gap?
+        // For now, simplicity: the analytics update logic will self-correct.
     }
 
     handleMarkerClick(point) {
@@ -201,7 +214,27 @@ class MissionControl {
     updateMissionData(progress) {
         this.hud.updateProgress(progress);
 
+        // Get Huck's Position
         const { currentPoint, index, interpolated } = this.intel.getDataAtProgress(progress);
+
+        // --- Analytics Update ---
+        const analyticsData = this.analytics.update(progress, currentPoint);
+
+        // Get Pursuit Position
+        const pursuitData = this.intel.getDataAtProgress(analyticsData.pursuitProgress);
+
+        // Update Map Visuals (Fog of War & Vectors)
+        // 1. Update Route Line: Only draw from start to Huck's current position
+        // We need all points up to index, plus the interpolated point
+        const points = this.intel.getPoints();
+        const exploredPoints = points.slice(0, index + 1).map(p => [p.lat, p.lng]);
+        exploredPoints.push([interpolated.lat, interpolated.lng]);
+        this.map.updateRouteLine(exploredPoints);
+
+        // 2. Update Pursuit Marker
+        if (pursuitData && pursuitData.interpolated) {
+            this.map.updatePursuitMarker(pursuitData.interpolated.lat, pursuitData.interpolated.lng);
+        }
 
         // Update Status & Highlight when passing markers
         if (index !== this.state.currentIndex) {
@@ -218,12 +251,32 @@ class MissionControl {
 
             const isMovingForward = index > this.state.currentIndex;
             this.state.currentIndex = index;
-            this.hud.updateStatus(currentPoint);
+
+            // Pass analytics to HUD
+            this.hud.updateStatus(currentPoint, analyticsData);
             this.map.highlightMarker(index);
 
             if (currentPoint.type === 'decision' && isMovingForward && this.state.isPlaying) {
                  this.triggerDecision(currentPoint);
             }
+        } else {
+             // Even if not a new index, update HUD stats (safety index changes fluently)
+             // Use a throttle or just check if risk changed?
+             // Since loop is 60fps, updating DOM text every frame is bad?
+             // Maybe only every 10 frames?
+             // Actually, browser DOM updates are fast enough for simple text,
+             // but let's be safe and rely on the fact that 'updateStatus' is called above only on index change.
+             // Wait, Safety Index changes continuously. We should update HUD continuously.
+             // Let's call updateStatus every frame?
+             this.hud.updateStatus(currentPoint, analyticsData);
+        }
+
+        // Alert if Safety drops low (once per threshold)
+        if (analyticsData.safetyIndex < 30 && !this.lowSafetyAlertTriggered) {
+             this.terminal.log("WARNING: THREAT PROXIMITY CRITICAL", "error");
+             this.lowSafetyAlertTriggered = true;
+        } else if (analyticsData.safetyIndex > 40) {
+             this.lowSafetyAlertTriggered = false;
         }
 
         // Smoothly pan map if playing
