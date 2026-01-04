@@ -27,15 +27,23 @@ export default class HUDInterface {
         this.els.app.appendChild(this.decisionContainer);
     }
 
-    updateStatus(point) {
+    updateStatus(point, analytics) {
         this.els.phase.textContent = point.phase;
         this.els.distance.textContent = point.mile;
-        this.els.statusText.textContent = point.risk;
+
+        let riskText = point.risk;
+        if (analytics) {
+             riskText += ` | SAFETY: ${analytics.safetyIndex}%`;
+        }
+        this.els.statusText.textContent = riskText;
 
         // Update risk light
         this.els.statusLight.className = 'status-indicator';
-        if (point.risk === 'Critical') this.els.statusLight.classList.add('status-critical');
-        if (point.risk === 'High') this.els.statusLight.classList.add('status-warning');
+        if (point.risk === 'Critical' || (analytics && analytics.safetyIndex < 30)) {
+             this.els.statusLight.classList.add('status-critical');
+        } else if (point.risk === 'High' || (analytics && analytics.safetyIndex < 60)) {
+             this.els.statusLight.classList.add('status-warning');
+        }
     }
 
     updateProgress(percent) {

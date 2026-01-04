@@ -20,6 +20,7 @@ export default class TacticalMap {
 
         this.markers = [];
         this.routeLine = null;
+        this.pursuitMarker = null;
         this.ghostLines = [];
     }
 
@@ -37,6 +38,12 @@ export default class TacticalMap {
         if (this.routeLine) {
             this.routeLine.remove();
             this.routeLine = null;
+        }
+
+        // Remove pursuit marker
+        if (this.pursuitMarker) {
+            this.pursuitMarker.remove();
+            this.pursuitMarker = null;
         }
     }
 
@@ -77,7 +84,10 @@ export default class TacticalMap {
     }
 
     renderRoute(data, isHistorical = true) {
-        const latlngs = data.map(d => [d.lat, d.lng]);
+        // Initial empty route for dynamic updates (Fog of War)
+        // Or full route if we decide to show it all.
+        // For FoW, we start empty or with just the first point.
+        const latlngs = data.length > 0 ? [[data[0].lat, data[0].lng]] : [];
 
         // Active Route
         this.routeLine = L.polyline(latlngs, {
@@ -87,10 +97,24 @@ export default class TacticalMap {
             dashArray: isHistorical ? '5, 10' : null,
             lineCap: 'round'
         }).addTo(this.map);
+    }
 
-        // Fit bounds to route
-        if (latlngs.length > 0) {
-            this.map.fitBounds(this.routeLine.getBounds(), { padding: [50, 50] });
+    updateRouteLine(latlngs) {
+        if (this.routeLine) {
+            this.routeLine.setLatLngs(latlngs);
+        }
+    }
+
+    updatePursuitMarker(lat, lng) {
+        if (!this.pursuitMarker) {
+            const icon = L.divIcon({
+                className: 'pursuit-marker',
+                iconSize: [20, 20],
+                html: '<div class="pulse-ring"></div>'
+            });
+            this.pursuitMarker = L.marker([lat, lng], { icon: icon, zIndexOffset: 1000 }).addTo(this.map);
+        } else {
+            this.pursuitMarker.setLatLng([lat, lng]);
         }
     }
 
