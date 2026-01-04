@@ -24,6 +24,11 @@ export default class TacticalMap {
     }
 
     clearLayers() {
+        this.clearActiveLayers();
+        this.clearGhosts();
+    }
+
+    clearActiveLayers() {
         // Remove markers
         this.markers.forEach(marker => marker.remove());
         this.markers = [];
@@ -33,7 +38,9 @@ export default class TacticalMap {
             this.routeLine.remove();
             this.routeLine = null;
         }
+    }
 
+    clearGhosts() {
         // Remove ghosts
         this.ghostLines.forEach(line => line.remove());
         this.ghostLines = [];

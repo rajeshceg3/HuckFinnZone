@@ -1,4 +1,4 @@
-import { LOCATIONS, SCENARIOS } from './data.js';
+import { LOCATIONS, SCENARIOS, CONFIG } from './data.js';
 import IntelSystem from './intel.js';
 import TacticalMap from './map.js';
 import HUDInterface from './hud.js';
@@ -51,24 +51,24 @@ class MissionControl {
     }
 
     refreshMap() {
-        // Clear existing layers if necessary (map.js handles addition, but not clearing yet)
-        // For now, we assume simple rendering on top or we need to add clear logic to map.
-        // Let's rely on map.renderRoute updating if we call it again? No, it adds new lines.
-        // We need a clear method in TacticalMap.
-        // Since I can't easily edit map.js right now without a separate tool call,
-        // I will assume for step 2 we just render.
-        // Wait, I should update map.js to support clearing.
-
-        this.map.clearLayers();
+        // Only clear active layers (route and markers), preserving ghosts
+        this.map.clearActiveLayers();
         this.map.renderMarkers(this.intel.getPoints(), (point) => this.handleMarkerClick(point));
         this.map.renderRoute(this.intel.getPoints());
     }
 
     handleDecision(decision) {
         console.log("Decision Made:", decision);
+
+        // Capture current mileage before switching
+        const { targetMile } = this.intel.getDataAtProgress(this.state.progress);
+
         // 1. Calculate new path based on decision
         // For now, hardcoded logic for the Cairo decision
         if (decision.targetId === 'ohio-river') {
+            // Save current path as ghost before switching
+            this.map.renderGhostPath(this.intel.getPoints());
+
             // Switch to Freedom Path
             this.intel.setPath(SCENARIOS['freedom']);
             this.terminal.log("PATH RECALCULATION: FREEDOM VECTOR ENGAGED", "success");
@@ -76,6 +76,20 @@ class MissionControl {
             // Stay on Historical Path (or explicit historical choice)
             this.terminal.log("PATH CONFIRMED: HISTORICAL TIMELINE", "warn");
             // No change needed if we are already on historical, but if we supported re-entrant choices...
+        }
+
+        // Recalculate progress to maintain geographic position (mileage)
+        // New Progress = Old Mile / New Total Distance
+        if (this.intel.totalDistance > 0) {
+            let newProgress = targetMile / this.intel.totalDistance;
+            // Clamp to 0-1
+            newProgress = Math.max(0, Math.min(1, newProgress));
+
+            // Update state
+            this.state.progress = newProgress;
+
+            // Force an update so the interpolation is correct immediately
+            this.updateMissionData(newProgress);
         }
 
         // 2. Resume playback
@@ -168,7 +182,7 @@ class MissionControl {
 
         if (this.state.isPlaying && !this.state.isPausedForDecision) {
             // Calculate increment based on duration
-            const duration = 15000;
+            const duration = CONFIG.animationSpeed;
             const increment = deltaTime / duration;
 
             this.state.progress += increment;
