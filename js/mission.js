@@ -4,6 +4,7 @@ import TacticalMap from './map.js';
 import HUDInterface from './hud.js';
 import CommandTerminal from './terminal.js';
 import TacticalAnalytics from './analytics.js';
+import PredictiveEngine from './engine.js';
 
 /**
  * Main Application Controller
@@ -18,6 +19,7 @@ class MissionControl {
         this.hud = new HUDInterface();
         this.terminal = new CommandTerminal(this);
         this.analytics = new TacticalAnalytics();
+        this.engine = new PredictiveEngine();
 
         this.state = {
             progress: 0, // 0.0 to 1.0
@@ -43,6 +45,11 @@ class MissionControl {
         // Listen for decision events from HUD
         document.addEventListener('decision-made', (e) => {
             this.handleDecision(e.detail);
+        });
+
+        // Listen for simulation requests
+        document.addEventListener('simulate-request', (e) => {
+            this.runPrediction(e.detail);
         });
 
         // Start Loop
@@ -312,6 +319,28 @@ class MissionControl {
         this.hud.setPlayState(false);
         this.hud.showDecision(point);
         this.terminal.log(`ALERT: DECISION POINT REACHED - ${point.title.toUpperCase()}`, 'warn');
+
+        // Generate and visualize hazards for context
+        const hazards = this.engine.generateHazards(point);
+        this.map.renderHazards(hazards);
+        this.terminal.log("ENV SENSORS: ANOMALIES DETECTED. PREDICTION RECOMMENDED.", "info");
+    }
+
+    runPrediction(params) {
+        const { choice, speed, stealth } = params;
+        const currentPoint = this.intel.getDataAtProgress(this.state.progress).currentPoint;
+
+        this.terminal.log("INITIATING PREDICTIVE MODELING...", "info");
+
+        setTimeout(() => {
+            const results = this.engine.runSimulation(currentPoint, choice, { speed, stealth });
+
+            // Log results to terminal
+            results.logs.forEach(log => this.terminal.log(log, "success"));
+
+            // Send results back to HUD
+            this.hud.showSimulationResults(results);
+        }, 1500); // Fake processing delay
     }
 }
 

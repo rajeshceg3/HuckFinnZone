@@ -22,11 +22,18 @@ export default class TacticalMap {
         this.routeLine = null;
         this.pursuitMarker = null;
         this.ghostLines = [];
+        this.hazardLayers = [];
     }
 
     clearLayers() {
         this.clearActiveLayers();
         this.clearGhosts();
+        this.clearHazards();
+    }
+
+    clearHazards() {
+        this.hazardLayers.forEach(layer => layer.remove());
+        this.hazardLayers = [];
     }
 
     clearActiveLayers() {
@@ -127,6 +134,21 @@ export default class TacticalMap {
             opacity: 0.5
         }).addTo(this.map);
         this.ghostLines.push(line);
+    }
+
+    renderHazards(hazards) {
+        this.clearHazards();
+        hazards.forEach(h => {
+            const circle = L.circle([h.lat, h.lng], {
+                color: 'red',
+                fillColor: '#f03',
+                fillOpacity: h.intensity * 0.5,
+                radius: h.radius,
+                weight: 1,
+                dashArray: '4, 4'
+            }).addTo(this.map);
+            this.hazardLayers.push(circle);
+        });
     }
 
     highlightMarker(index) {

@@ -28,6 +28,8 @@ export default class HUDInterface {
         this.decisionContainer.setAttribute('aria-modal', 'true');
         this.decisionContainer.setAttribute('aria-labelledby', 'decision-title');
         this.els.app.appendChild(this.decisionContainer);
+
+        this.currentDecisionPoint = null;
     }
 
     updateStatus(point, analytics) {
@@ -78,6 +80,7 @@ export default class HUDInterface {
     }
 
     showDecision(point) {
+        this.currentDecisionPoint = point;
         this.decisionContainer.innerHTML = '';
 
         const content = document.createElement('div');
@@ -110,10 +113,23 @@ export default class HUDInterface {
                 <div class="btn-desc">${choice.description}</div>
                 <div class="btn-risk">${choice.consequence}</div>
             `;
+
+            // Primary Action: Commit
             btn.onclick = () => {
                 const event = new CustomEvent('decision-made', { detail: choice });
                 document.dispatchEvent(event);
             };
+
+            // Secondary Action: Simulate
+            const simBtn = document.createElement('div');
+            simBtn.className = 'sim-btn-trigger';
+            simBtn.textContent = "[ RUN PREDICTION ]";
+            simBtn.onclick = (e) => {
+                e.stopPropagation(); // Don't trigger choice
+                this.showSimulationUI(choice);
+            };
+
+            btn.appendChild(simBtn);
             optionsDiv.appendChild(btn);
         });
 
@@ -127,7 +143,73 @@ export default class HUDInterface {
         }
     }
 
+    showSimulationUI(choice) {
+        // Clear decision modal content temporarily
+        const content = this.decisionContainer.querySelector('.decision-content');
+        content.innerHTML = '';
+
+        const title = document.createElement('h2');
+        title.textContent = `PREDICTIVE MODELING: ${choice.label}`;
+        content.appendChild(title);
+
+        const controls = document.createElement('div');
+        controls.className = 'sim-controls';
+
+        controls.innerHTML = `
+            <div class="sim-slider-row">
+                <label>AGGRESSION / SPEED</label>
+                <input type="range" id="sim-speed" min="0" max="100" value="50">
+            </div>
+            <div class="sim-slider-row">
+                <label>STEALTH / EVASION</label>
+                <input type="range" id="sim-stealth" min="0" max="100" value="50">
+            </div>
+            <div id="sim-output" class="sim-output">READY TO INITIALIZE...</div>
+        `;
+        content.appendChild(controls);
+
+        const btnRow = document.createElement('div');
+        btnRow.className = 'sim-actions';
+
+        const runBtn = document.createElement('button');
+        runBtn.className = 'hud-btn';
+        runBtn.textContent = "EXECUTE SIMULATION";
+        runBtn.onclick = () => {
+            const speed = document.getElementById('sim-speed').value;
+            const stealth = document.getElementById('sim-stealth').value;
+
+            document.getElementById('sim-output').innerHTML = "CALCULATING PROBABILITIES...<br><span class='blink'>...</span>";
+
+            document.dispatchEvent(new CustomEvent('simulate-request', {
+                detail: { choice, speed, stealth }
+            }));
+        };
+
+        const backBtn = document.createElement('button');
+        backBtn.className = 'hud-btn secondary';
+        backBtn.textContent = "BACK";
+        backBtn.onclick = () => {
+            if(this.currentDecisionPoint) this.showDecision(this.currentDecisionPoint);
+        };
+
+        btnRow.appendChild(runBtn);
+        btnRow.appendChild(backBtn);
+        content.appendChild(btnRow);
+    }
+
+    showSimulationResults(results) {
+        const output = document.getElementById('sim-output');
+        if (output) {
+            const color = results.successRate > 75 ? '#0f0' : (results.successRate > 40 ? '#fa0' : '#f03');
+            output.innerHTML = `
+                SIMULATION RESULT:<br>
+                <span style="color: ${color}; font-size: 1.2em; font-weight: bold;">SUCCESS PROBABILITY: ${results.successRate.toFixed(1)}%</span>
+            `;
+        }
+    }
+
     hideDecision() {
         this.decisionContainer.classList.remove('active');
+        this.currentDecisionPoint = null;
     }
 }
