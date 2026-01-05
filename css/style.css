@@ -140,7 +140,7 @@ html, body {
     transform: translateX(-50%) translateY(150%);
     width: 80%;
     max-width: 800px;
-    z-index: 1000;
+    z-index: 3001; /* Above decision modal */
     background: var(--hud-bg);
     backdrop-filter: blur(10px);
     padding: 15px 25px;
@@ -443,10 +443,27 @@ html, body {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.5s ease;
+    /* Allow seeing map underneath somewhat better, though we block interaction there */
+    backdrop-filter: blur(5px);
 }
 
 #decision-modal.active {
     opacity: 1;
+    /* Make the modal container catch events, but maybe not the whole screen? */
+    /* No, we want to block interaction with the map to force decision,
+       UNLESS the user uses the slider/controls which are separate.
+       Wait, the slider is z-index 1000. Modal is 3000.
+       If we want to allow slider interaction, we need to restructure.
+       OR, we make the background 'pointer-events: auto' to block map,
+       but we verify if we want to allow slider.
+       Actually, standard modal behavior is blocking.
+       The UX fix we implemented allows seeking, but the modal is on top.
+       So the user CANNOT click the slider because the modal is on top.
+
+       We need to let the slider be ABOVE the modal?
+       Timeline control z-index is 1000.
+       If we raise timeline control to 3001?
+    */
     pointer-events: auto;
 }
 

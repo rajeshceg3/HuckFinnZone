@@ -56,13 +56,23 @@ export default class TacticalAnalytics {
         let baseSafety = 100;
         if (this.currentThreatLevel === 'Medium') baseSafety = 80;
         if (this.currentThreatLevel === 'High') baseSafety = 50;
-        if (this.currentThreatLevel === 'Critical') baseSafety = 20;
+        if (this.currentThreatLevel === 'Critical') baseSafety = 30;
 
         // Adjust by proximity (closer = less safe)
-        // If proximity is > 10, no penalty. If < 2, massive penalty.
+        // If proximity is large, no penalty.
+        // We use a continuous decay for smoother updates rather than steps
+
         let proximityPenalty = 0;
-        if (proximity < 2) proximityPenalty = 50;
-        else if (proximity < 5) proximityPenalty = 20;
+        if (proximity <= 0) {
+            proximityPenalty = 100; // Caught
+        } else if (proximity < 10) {
+            // Exponential decay penalty as they get closer
+            // gap 10 -> 0 penalty
+            // gap 2 -> high penalty
+            // gap 5 -> medium penalty
+            // Formula: 100 * (1 - gap/10)^2
+            proximityPenalty = 50 * Math.pow((10 - proximity) / 10, 2);
+        }
 
         this.safetyIndex = Math.max(0, Math.min(100, baseSafety - proximityPenalty));
 

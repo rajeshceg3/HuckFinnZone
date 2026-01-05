@@ -24,6 +24,9 @@ export default class HUDInterface {
         // Create decision container
         this.decisionContainer = document.createElement('div');
         this.decisionContainer.id = 'decision-modal';
+        this.decisionContainer.setAttribute('role', 'dialog');
+        this.decisionContainer.setAttribute('aria-modal', 'true');
+        this.decisionContainer.setAttribute('aria-labelledby', 'decision-title');
         this.els.app.appendChild(this.decisionContainer);
     }
 
@@ -48,7 +51,9 @@ export default class HUDInterface {
 
     updateProgress(percent) {
         this.els.progress.style.width = `${percent * 100}%`;
-        this.els.sliderContainer.setAttribute('aria-valuenow', Math.round(percent * 100));
+        const val = Math.round(percent * 100);
+        this.els.sliderContainer.setAttribute('aria-valuenow', val);
+        this.els.sliderContainer.setAttribute('aria-valuetext', `${val} percent complete`);
     }
 
     setPlayState(isPlaying) {
@@ -79,6 +84,7 @@ export default class HUDInterface {
         content.className = 'decision-content';
 
         const title = document.createElement('h2');
+        title.id = 'decision-title';
         title.textContent = `TACTICAL INTERVENTION: ${point.title}`;
         content.appendChild(title);
 
@@ -89,9 +95,16 @@ export default class HUDInterface {
         const optionsDiv = document.createElement('div');
         optionsDiv.className = 'decision-options';
 
-        point.choices.forEach(choice => {
+        // Focus trap helper
+        let firstBtn = null;
+        let lastBtn = null;
+
+        point.choices.forEach((choice, index) => {
             const btn = document.createElement('button');
             btn.className = 'decision-btn';
+            if (index === 0) firstBtn = btn;
+            lastBtn = btn;
+
             btn.innerHTML = `
                 <div class="btn-label">${choice.label}</div>
                 <div class="btn-desc">${choice.description}</div>
@@ -107,6 +120,11 @@ export default class HUDInterface {
         content.appendChild(optionsDiv);
         this.decisionContainer.appendChild(content);
         this.decisionContainer.classList.add('active');
+
+        // Focus the first option
+        if (firstBtn) {
+            setTimeout(() => firstBtn.focus(), 100);
+        }
     }
 
     hideDecision() {

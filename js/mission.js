@@ -56,11 +56,11 @@ class MissionControl {
         // Only clear active layers (route and markers), preserving ghosts
         this.map.clearActiveLayers();
         this.map.renderMarkers(this.intel.getPoints(), (point) => this.handleMarkerClick(point));
-        // Note: For FoW, we don't render the full route initially.
-        // But we might want to render what we know so far.
-        // For simplicity, renderRoute will handle the "base" empty line,
-        // and loop() will update it.
-        this.map.renderRoute(this.intel.getPoints());
+
+        // For Fog of War, we should NOT render the full route initially.
+        // We start with an empty route or just the start point.
+        // The loop() will update it based on progress.
+        this.map.renderRoute([]);
     }
 
     handleDecision(decision) {
@@ -142,11 +142,22 @@ class MissionControl {
 
         // Mouse/Touch Handling
         const updateFromEvent = (clientX) => {
-            if (this.state.isPausedForDecision) return;
+            // Allow seeking even if paused for decision (user might want to review)
+            // If they seek away from the decision point, we should probably hide the decision?
+            // Yes, let's allow it but cancel decision mode if we move significantly.
 
             const rect = slider.getBoundingClientRect();
             const x = clientX - rect.left;
             const pct = Math.max(0, Math.min(1, x / rect.width));
+
+            // If we are seeking, we are manually overriding.
+            // If we seek away, we might want to cancel the decision block?
+            if (this.state.isPausedForDecision) {
+                 this.hud.hideDecision();
+                 this.state.isPausedForDecision = false;
+                 this.terminal.log("Decision context aborted by manual override.", "warn");
+            }
+
             this.seek(pct);
         };
 
@@ -215,10 +226,19 @@ class MissionControl {
         this.hud.updateProgress(progress);
 
         // Get Huck's Position
-        const { currentPoint, index, interpolated } = this.intel.getDataAtProgress(progress);
+        // logicalPoint is the node we are "at" or "leaving"
+        // visualPoint is the node we are visually closest to or "arriving at"
+        const { currentPoint, nextPoint, index, segmentProgress, interpolated } = this.intel.getDataAtProgress(progress);
+
+        // Determine the "Display Point" for HUD and Logic
+        // If we are > 95% through a segment, we are effectively arriving at the next point.
+        let displayPoint = currentPoint;
+        if (segmentProgress > 0.95 && nextPoint) {
+            displayPoint = nextPoint;
+        }
 
         // --- Analytics Update ---
-        const analyticsData = this.analytics.update(progress, currentPoint);
+        const analyticsData = this.analytics.update(progress, displayPoint);
 
         // Get Pursuit Position
         const pursuitData = this.intel.getDataAtProgress(analyticsData.pursuitProgress);
@@ -237,38 +257,36 @@ class MissionControl {
         }
 
         // Update Status & Highlight when passing markers
-        if (index !== this.state.currentIndex) {
+        // We use displayPoint.id to track logical changes
+        if (displayPoint.id !== this.state.currentDisplayId) {
 
-            // CHECK FOR DECISION POINT
-            // We only trigger if we are "entering" the node and it is a decision node
-            // and we haven't just made the decision (avoid loop)
-            // For simplicity: Trigger when we hit the exact index of a decision node?
-            // Or when we are close?
-            // Better: Trigger when currentPoint changes to a decision node.
-
-            // Wait, if we just made a decision, we are AT the node. We don't want to trigger again.
-            // We can check if we are moving forward.
-
-            const isMovingForward = index > this.state.currentIndex;
-            this.state.currentIndex = index;
+            const isMovingForward = progress > (this.state.lastProgress || 0);
+            this.state.currentDisplayId = displayPoint.id;
+            this.state.lastProgress = progress; // Track direction
 
             // Pass analytics to HUD
-            this.hud.updateStatus(currentPoint, analyticsData);
-            this.map.highlightMarker(index);
+            this.hud.updateStatus(displayPoint, analyticsData);
 
-            if (currentPoint.type === 'decision' && isMovingForward && this.state.isPlaying) {
-                 this.triggerDecision(currentPoint);
+            // Highlight the marker we are closest to
+            // If displayPoint is nextPoint, we want to highlight that index
+            // We need to find the index of displayPoint in the data array
+            const displayIndex = this.intel.getPoints().indexOf(displayPoint);
+            if (displayIndex >= 0) {
+                 this.map.highlightMarker(displayIndex);
+            }
+
+            // Trigger Decision if we have arrived at a decision node
+            // and we are playing (not seeking past it)
+            if (displayPoint.type === 'decision' && isMovingForward && this.state.isPlaying) {
+                 this.triggerDecision(displayPoint);
             }
         } else {
-             // Even if not a new index, update HUD stats (safety index changes fluently)
-             // Use a throttle or just check if risk changed?
-             // Since loop is 60fps, updating DOM text every frame is bad?
-             // Maybe only every 10 frames?
-             // Actually, browser DOM updates are fast enough for simple text,
-             // but let's be safe and rely on the fact that 'updateStatus' is called above only on index change.
-             // Wait, Safety Index changes continuously. We should update HUD continuously.
-             // Let's call updateStatus every frame?
-             this.hud.updateStatus(currentPoint, analyticsData);
+             // Continuous update for safety index, but throttled
+             if (!this.frameCount) this.frameCount = 0;
+             this.frameCount++;
+             if (this.frameCount % 10 === 0) {
+                 this.hud.updateStatus(displayPoint, analyticsData);
+             }
         }
 
         // Alert if Safety drops low (once per threshold)
