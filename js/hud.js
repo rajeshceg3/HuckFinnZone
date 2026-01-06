@@ -141,6 +141,30 @@ export default class HUDInterface {
         if (firstBtn) {
             setTimeout(() => firstBtn.focus(), 100);
         }
+
+        // Focus Trap
+        const focusableElements = this.decisionContainer.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusableElements.length > 0) {
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            this.decisionContainer.addEventListener('keydown', (e) => {
+                const isTab = (e.key === 'Tab' || e.keyCode === 9);
+                if (!isTab) return;
+
+                if (e.shiftKey) { // Shift + Tab
+                    if (document.activeElement === firstElement) {
+                        e.preventDefault();
+                        lastElement.focus();
+                    }
+                } else { // Tab
+                    if (document.activeElement === lastElement) {
+                        e.preventDefault();
+                        firstElement.focus();
+                    }
+                }
+            });
+        }
     }
 
     showSimulationUI(choice) {
@@ -211,5 +235,7 @@ export default class HUDInterface {
     hideDecision() {
         this.decisionContainer.classList.remove('active');
         this.currentDecisionPoint = null;
+        // Return focus to map or app container to ensure keyboard nav continues
+        this.els.app.focus();
     }
 }
