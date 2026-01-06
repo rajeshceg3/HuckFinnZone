@@ -255,11 +255,16 @@ class MissionControl {
         // We need all points up to index, plus the interpolated point
         const points = this.intel.getPoints();
         const exploredPoints = points.slice(0, index + 1).map(p => [p.lat, p.lng]);
-        exploredPoints.push([interpolated.lat, interpolated.lng]);
+
+        // Safety check for interpolated point
+        if (interpolated && typeof interpolated.lat === 'number' && typeof interpolated.lng === 'number' && !isNaN(interpolated.lat) && !isNaN(interpolated.lng)) {
+             exploredPoints.push([interpolated.lat, interpolated.lng]);
+        }
+
         this.map.updateRouteLine(exploredPoints);
 
         // 2. Update Pursuit Marker
-        if (pursuitData && pursuitData.interpolated) {
+        if (pursuitData && pursuitData.interpolated && !isNaN(pursuitData.interpolated.lat)) {
             this.map.updatePursuitMarker(pursuitData.interpolated.lat, pursuitData.interpolated.lng);
         }
 
@@ -305,9 +310,9 @@ class MissionControl {
         }
 
         // Smoothly pan map if playing
-        if (this.state.isPlaying && interpolated) {
+        if (this.state.isPlaying && interpolated && !isNaN(interpolated.lat)) {
             this.map.panTo(interpolated.lat, interpolated.lng, true);
-        } else if (!this.state.isPlaying && index !== this.state.currentIndex) {
+        } else if (!this.state.isPlaying && index !== this.state.currentIndex && currentPoint) {
             // Snap to marker if not playing (seeking)
             this.map.panTo(currentPoint.lat, currentPoint.lng);
         }

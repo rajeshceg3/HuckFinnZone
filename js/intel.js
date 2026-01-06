@@ -45,6 +45,9 @@ export default class IntelSystem {
                 const segmentDist = this.data[i+1].mile - this.data[i].mile;
                 if (segmentDist > 0) {
                     segmentProgress = (targetMile - this.data[i].mile) / segmentDist;
+                } else {
+                    // Safe fallback for zero-length segments to avoid NaN/Infinity issues
+                    segmentProgress = 1;
                 }
                 break;
             }
@@ -62,6 +65,6 @@ export default class IntelSystem {
         const lat = currentPoint.lat + (nextPoint.lat - currentPoint.lat) * segmentProgress;
         const lng = currentPoint.lng + (nextPoint.lng - currentPoint.lng) * segmentProgress;
 
-        return { currentPoint, nextPoint, index, targetMile, interpolated: { lat, lng } };
+        return { currentPoint, nextPoint, index, targetMile, segmentProgress, interpolated: { lat, lng } };
     }
 }
