@@ -13,8 +13,7 @@ export default class HUDInterface {
             panelBody: document.getElementById('panel-body'),
             closeBtn: document.getElementById('close-panel'),
             playBtn: document.getElementById('play-pause-btn'),
-            progress: document.getElementById('timeline-progress'),
-            sliderContainer: document.getElementById('timeline-slider-container'),
+            slider: document.getElementById('timeline-slider'),
             // Decision elements (created dynamically or pre-existing? Let's create dynamically for now or add to HTML)
             app: document.getElementById('app')
         };
@@ -28,6 +27,32 @@ export default class HUDInterface {
         this.decisionContainer.setAttribute('aria-modal', 'true');
         this.decisionContainer.setAttribute('aria-labelledby', 'decision-title');
         this.els.app.appendChild(this.decisionContainer);
+
+        // Global Focus Trap Listener for the container
+        this.decisionContainer.addEventListener('keydown', (e) => {
+            if (!this.decisionContainer.classList.contains('active')) return;
+
+            const isTab = (e.key === 'Tab' || e.keyCode === 9);
+            if (!isTab) return;
+
+            const focusableElements = this.decisionContainer.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusableElements.length === 0) return;
+
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) { // Shift + Tab
+                if (document.activeElement === firstElement) {
+                    e.preventDefault();
+                    lastElement.focus();
+                }
+            } else { // Tab
+                if (document.activeElement === lastElement) {
+                    e.preventDefault();
+                    firstElement.focus();
+                }
+            }
+        });
 
         this.currentDecisionPoint = null;
     }
@@ -52,16 +77,14 @@ export default class HUDInterface {
     }
 
     updateProgress(percent) {
-        this.els.progress.style.width = `${percent * 100}%`;
-        const val = Math.round(percent * 100);
-        this.els.sliderContainer.setAttribute('aria-valuenow', val);
-        this.els.sliderContainer.setAttribute('aria-valuetext', `${val} percent complete`);
+        this.els.slider.value = percent * 100;
+        this.els.slider.setAttribute('aria-valuenow', Math.round(percent * 100));
     }
 
     setPlayState(isPlaying) {
         this.els.playBtn.innerHTML = isPlaying
-            ? '<svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor"><rect width="4" height="16" x="1" y="1" rx="1"/><rect width="4" height="16" x="9" y="1" rx="1"/></svg>'
-            : '<svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor"><path d="M1 1L13 9L1 17V1Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+            ? '<svg aria-hidden="true" width="14" height="18" viewBox="0 0 14 18" fill="currentColor"><rect width="4" height="16" x="1" y="1" rx="1"/><rect width="4" height="16" x="9" y="1" rx="1"/></svg>'
+            : '<svg aria-hidden="true" width="14" height="18" viewBox="0 0 14 18" fill="currentColor"><path d="M1 1L13 9L1 17V1Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
     }
 
     showStory(point) {
@@ -142,29 +165,6 @@ export default class HUDInterface {
             setTimeout(() => firstBtn.focus(), 100);
         }
 
-        // Focus Trap
-        const focusableElements = this.decisionContainer.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        if (focusableElements.length > 0) {
-            const firstElement = focusableElements[0];
-            const lastElement = focusableElements[focusableElements.length - 1];
-
-            this.decisionContainer.addEventListener('keydown', (e) => {
-                const isTab = (e.key === 'Tab' || e.keyCode === 9);
-                if (!isTab) return;
-
-                if (e.shiftKey) { // Shift + Tab
-                    if (document.activeElement === firstElement) {
-                        e.preventDefault();
-                        lastElement.focus();
-                    }
-                } else { // Tab
-                    if (document.activeElement === lastElement) {
-                        e.preventDefault();
-                        firstElement.focus();
-                    }
-                }
-            });
-        }
     }
 
     showSimulationUI(choice) {
