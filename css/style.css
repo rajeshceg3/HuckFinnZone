@@ -176,29 +176,53 @@ html, body {
     color: #fff;
 }
 
-#timeline-slider-container {
+#timeline-slider {
     flex-grow: 1;
-    position: relative;
+    -webkit-appearance: none;
+    width: 100%;
     height: 6px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
-    cursor: pointer;
     outline: none;
+    cursor: pointer;
 }
 
-#timeline-slider-container:focus {
-    box-shadow: 0 0 0 2px var(--hud-accent);
-}
-
-#timeline-progress {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 0%;
+#timeline-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
     background: var(--hud-accent);
-    border-radius: 3px;
-    /* removed transition for smoother dragging */
+    cursor: pointer;
+    border: 2px solid var(--hud-bg);
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    transition: transform 0.1s;
+}
+
+#timeline-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--hud-accent);
+    cursor: pointer;
+    border: 2px solid var(--hud-bg);
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    transition: transform 0.1s;
+}
+
+#timeline-slider:focus::-webkit-slider-thumb {
+    transform: scale(1.2);
+    box-shadow: 0 0 10px var(--hud-accent);
+}
+
+#timeline-slider:focus::-moz-range-thumb {
+    transform: scale(1.2);
+    box-shadow: 0 0 10px var(--hud-accent);
+}
+
+#timeline-slider:focus {
+    box-shadow: 0 0 0 2px rgba(10, 147, 150, 0.3);
 }
 
 /* --- Map Markers & Path --- */

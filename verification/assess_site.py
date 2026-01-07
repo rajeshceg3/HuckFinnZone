@@ -30,8 +30,21 @@ async def run():
         print(f"Title: {title}")
 
         # Interact with slider
-        slider = page.locator("#timeline-slider-container")
-        await slider.click()
+        slider = page.locator("#timeline-slider")
+
+        # Debug: check visibility
+        is_visible = await slider.is_visible()
+        print(f"Slider visible: {is_visible}")
+        box = await slider.bounding_box()
+        print(f"Slider box: {box}")
+
+        if is_visible:
+            await slider.click(force=True)
+            # Take verification screenshot
+            await page.screenshot(path="verification/verification_final.png")
+        else:
+            print("Slider not visible, taking debug screenshot")
+            await page.screenshot(path="verification/debug_slider_invisible.png")
 
         await page.wait_for_timeout(1000)
 

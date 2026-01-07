@@ -144,61 +144,26 @@ class MissionControl {
     }
 
     setupTimelineInteraction() {
-        const slider = this.hud.els.sliderContainer;
-        let isDragging = false;
+        const slider = this.hud.els.slider;
 
-        // Mouse/Touch Handling
-        const updateFromEvent = (clientX) => {
-            // Allow seeking even if paused for decision (user might want to review)
-            // If they seek away from the decision point, we should probably hide the decision?
-            // Yes, let's allow it but cancel decision mode if we move significantly.
+        const handleInput = () => {
+             const val = parseFloat(slider.value);
+             const pct = val / 100;
 
-            const rect = slider.getBoundingClientRect();
-            const x = clientX - rect.left;
-            const pct = Math.max(0, Math.min(1, x / rect.width));
-
-            // If we are seeking, we are manually overriding.
-            // If we seek away, we might want to cancel the decision block?
-            if (this.state.isPausedForDecision) {
+             // If we are seeking, we are manually overriding.
+             if (this.state.isPausedForDecision) {
                  this.hud.hideDecision();
                  this.state.isPausedForDecision = false;
                  this.terminal.log("Decision context aborted by manual override.", "warn");
-            }
+             }
 
-            this.seek(pct);
+             this.seek(pct);
         };
 
-        slider.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            updateFromEvent(e.clientX);
-        });
+        slider.addEventListener('input', handleInput);
 
-        document.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                e.preventDefault();
-                updateFromEvent(e.clientX);
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
-
-        // Keyboard Handling
-        slider.addEventListener('keydown', (e) => {
-            if (this.state.isPausedForDecision) return;
-
-            const STEP = 0.05; // 5% jump
-            let newProgress = this.state.progress;
-
-            if (e.key === 'ArrowRight') {
-                newProgress = Math.min(1, this.state.progress + STEP);
-                this.seek(newProgress);
-            } else if (e.key === 'ArrowLeft') {
-                newProgress = Math.max(0, this.state.progress - STEP);
-                this.seek(newProgress);
-            }
-        });
+        // Also listen for change to ensure final commit
+        slider.addEventListener('change', handleInput);
     }
 
     seek(pct) {

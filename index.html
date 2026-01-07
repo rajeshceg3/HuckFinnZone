@@ -47,13 +47,11 @@
         <!-- Timeline Control -->
         <div id="timeline-control">
             <button id="play-pause-btn" aria-label="Play Mission">
-                <svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <svg aria-hidden="true" width="14" height="18" viewBox="0 0 14 18" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                     <path d="M1 1L13 9L1 17V1Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                 </svg>
             </button>
-            <div id="timeline-slider-container" role="slider" tabindex="0" aria-label="Timeline Control" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                <div id="timeline-progress"></div>
-            </div>
+            <input type="range" id="timeline-slider" min="0" max="100" value="0" step="0.1" aria-label="Mission Timeline">
         </div>
 
         <!-- Story Panel -->
@@ -64,13 +62,13 @@
         </div>
 
         <!-- Decor -->
-        <div id="river-svg">
+        <div id="river-svg" aria-hidden="true">
             <svg class="waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
                 <defs>
                     <path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" />
                 </defs>
                 <g class="parallax">
-                    <use href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.7" />
+                    <use href="#gentle-wave" x="48" y="0" fill="rgba(255,255,255,0.7)" />
                     <use href="#gentle-wave" x="48" y="3" fill="rgba(255,255,255,0.5)" />
                     <use href="#gentle-wave" x="48" y="5" fill="rgba(255,255,255,0.3)" />
                     <use href="#gentle-wave" x="48" y="7" fill="#fff" />
