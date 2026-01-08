@@ -9,7 +9,7 @@ import PredictiveEngine from './engine.js';
 /**
  * Main Application Controller
  */
-class MissionControl {
+export default class MissionControl {
     constructor() {
         this.intel = new IntelSystem(LOCATIONS);
         // Initialize with historical path
