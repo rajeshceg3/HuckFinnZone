@@ -13,10 +13,11 @@ export default class TacticalMap {
 
         L.control.attribution({position: 'bottomright'}).addTo(this.map);
 
-        // Darker map style for "Tactical" feel
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19
-        }).addTo(this.map);
+        // Warm paper basemap (worlds shared module): OpenFreeMap vector tiles,
+        // custom watercolor-wash style. Free public instance, no API key.
+        maplibregl.setWorkerUrl('vendor/maplibre/maplibre-gl-csp-worker.js');
+        L.maplibreGL({ style: window.WARM_MAP_STYLE }).addTo(this.map);
+        this.map.attributionControl.addAttribution('<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> <a href="https://www.openmaptiles.org/" target="_blank">&copy; OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>');
 
         this.markers = [];
         this.routeLine = null;
