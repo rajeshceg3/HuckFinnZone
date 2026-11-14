@@ -120,7 +120,7 @@ export default class TacticalMap {
                 iconSize: [20, 20],
                 html: '<div class="pulse-ring"></div>'
             });
-            this.pursuitMarker = L.marker([lat, lng], { icon: icon, zIndexOffset: 1000 }).addTo(this.map);
+            this.pursuitMarker = L.marker([lat, lng], { icon: icon, zIndexOffset: 1000, interactive: false, keyboard: false }).addTo(this.map);
         } else {
             this.pursuitMarker.setLatLng([lat, lng]);
         }

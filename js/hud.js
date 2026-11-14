@@ -1,3 +1,4 @@
+import setupMissionControls from './controls.js';
 /**
  * Manages the Heads-Up Display and Story Panel
  */
@@ -28,6 +29,8 @@ export default class HUDInterface {
         this.decisionContainer.setAttribute('aria-labelledby', 'decision-title');
         this.els.app.appendChild(this.decisionContainer);
 
+        this.decisionContainer.inert = true;
+
         // Global Focus Trap Listener for the container
         this.decisionContainer.addEventListener('keydown', (e) => {
             if (!this.decisionContainer.classList.contains('active')) return;
@@ -55,6 +58,7 @@ export default class HUDInterface {
         });
 
         this.currentDecisionPoint = null;
+        this.controls = setupMissionControls(this);
     }
 
     updateStatus(point, analytics) {
@@ -82,6 +86,7 @@ export default class HUDInterface {
     }
 
     setPlayState(isPlaying) {
+        this.els.playBtn.setAttribute('aria-label', isPlaying ? 'Pause Mission' : 'Play Mission');
         this.els.playBtn.innerHTML = isPlaying
             ? '<svg aria-hidden="true" width="14" height="18" viewBox="0 0 14 18" fill="currentColor"><rect width="4" height="16" x="1" y="1" rx="1"/><rect width="4" height="16" x="9" y="1" rx="1"/></svg>'
             : '<svg aria-hidden="true" width="14" height="18" viewBox="0 0 14 18" fill="currentColor"><path d="M1 1L13 9L1 17V1Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
@@ -95,14 +100,28 @@ export default class HUDInterface {
                 "${point.quote}"
             </p>
         `;
+        this.controls.close(false);
+        document.dispatchEvent(new Event('close-terminal'));
+        this.storyReturn = document.activeElement;
+        this.els.storyPanel.hidden = false;
+        this.els.storyPanel.inert = false;
         this.els.storyPanel.classList.add('active');
+        this.els.storyPanel.scrollTop = 0;
+        this.els.closeBtn.focus();
     }
 
     hideStory() {
         this.els.storyPanel.classList.remove('active');
+        this.els.storyPanel.hidden = true;
+        this.els.storyPanel.inert = true;
+        if(this.storyReturn?.isConnected) this.storyReturn.focus();
     }
 
     showDecision(point) {
+        this.controls.close(false);
+        this.hideStory();
+        document.dispatchEvent(new Event('close-terminal'));
+        this.decisionContainer.inert = false;
         this.currentDecisionPoint = point;
         this.decisionContainer.innerHTML = '';
 
@@ -144,19 +163,29 @@ export default class HUDInterface {
             };
 
             // Secondary Action: Simulate
-            const simBtn = document.createElement('div');
+            const simBtn = document.createElement('button');
             simBtn.className = 'sim-btn-trigger';
+            simBtn.setAttribute('aria-label', `Run prediction: ${choice.label}`);
             simBtn.textContent = "[ RUN PREDICTION ]";
             simBtn.onclick = (e) => {
                 e.stopPropagation(); // Don't trigger choice
                 this.showSimulationUI(choice);
             };
 
-            btn.appendChild(simBtn);
             optionsDiv.appendChild(btn);
+            optionsDiv.appendChild(simBtn);
         });
 
         content.appendChild(optionsDiv);
+        const timelineBtn = document.createElement('button');
+        timelineBtn.className = 'hud-btn';
+        timelineBtn.textContent = 'Return to timeline';
+        timelineBtn.addEventListener('click', () => {
+            this.hideDecision();
+            document.dispatchEvent(new Event('timeline-return'));
+            document.getElementById('mission-toggle').click();
+        });
+        content.appendChild(timelineBtn);
         this.decisionContainer.appendChild(content);
         this.decisionContainer.classList.add('active');
 
@@ -173,6 +202,7 @@ export default class HUDInterface {
         content.innerHTML = '';
 
         const title = document.createElement('h2');
+        title.id = 'decision-title';
         title.textContent = `PREDICTIVE MODELING: ${choice.label}`;
         content.appendChild(title);
 
@@ -190,7 +220,13 @@ export default class HUDInterface {
             </div>
             <div id="sim-output" class="sim-output">READY TO INITIALIZE...</div>
         `;
+        const note = document.createElement('p');
+        note.className = 'model-note';
+        note.textContent = 'Fictional game model, not a historical forecast.';
+        content.appendChild(note);
         content.appendChild(controls);
+        controls.querySelector('#sim-speed').setAttribute('aria-label', 'Aggression / speed');
+        controls.querySelector('#sim-stealth').setAttribute('aria-label', 'Stealth / evasion');
 
         const btnRow = document.createElement('div');
         btnRow.className = 'sim-actions';
@@ -219,6 +255,7 @@ export default class HUDInterface {
         btnRow.appendChild(runBtn);
         btnRow.appendChild(backBtn);
         content.appendChild(btnRow);
+        runBtn.focus();
     }
 
     showSimulationResults(results) {
@@ -235,6 +272,7 @@ export default class HUDInterface {
     hideDecision() {
         this.decisionContainer.classList.remove('active');
         this.currentDecisionPoint = null;
+        this.decisionContainer.inert = true;
         // Return focus to map or app container to ensure keyboard nav continues
         this.els.app.focus();
     }

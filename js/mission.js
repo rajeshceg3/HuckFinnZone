@@ -52,6 +52,12 @@ export default class MissionControl {
             this.runPrediction(e.detail);
         });
 
+        document.addEventListener('timeline-return', () => {
+            this.state.isPausedForDecision = false;
+            this.state.isPlaying = false;
+            this.hud.setPlayState(false);
+        });
+
         // Start Loop
         requestAnimationFrame((t) => this.loop(t));
 
