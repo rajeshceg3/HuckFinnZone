@@ -80,3 +80,9 @@ tests/
 ├── integration/    # Component interaction tests
 ├── e2e/            # Browser-based user flow tests
 ```
+
+## Mobile mission controls
+
+`CHROME_PATH=/usr/bin/google-chrome node verify-mobile.cjs` starts a temporary local server and checks 320/390/1280px. Captures are saved to `test-results/mobile` (or `CAPTURES`). Set `REDUCED=1` for the OS reduced-motion path or `LIVE=https://huckfinnzone.pages.dev/` for deployed checks. The script covers all seven historical places, Mission disclosure, timeline, play/pause, terminal, first-place pointer selection, decisions, predictions, both routes and return to timeline. `CHROME_PATH` is optional when Playwright Chromium is installed.
+
+Scene motion, map style/camera, pursuit maths, hazards and prediction model are unchanged. Model probabilities are fictional game outputs, not historical forecasts.

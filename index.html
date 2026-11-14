@@ -21,12 +21,16 @@
     <link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/pursuit.css">
+    <link rel="stylesheet" href="css/controls.css">
 </head>
 <body>
 
     <div id="app">
         
         <!-- HUD Overlay -->
+        <button id="mission-toggle" aria-expanded="false" aria-controls="mission-panel">Mission <span aria-hidden="true">+</span></button>
+        <section id="mission-panel" aria-label="Mission controls" hidden inert>
+        <header class="mission-header"><h2>River mission</h2><button id="mission-close" aria-label="Close mission controls">×</button></header>
         <div id="hud-overlay">
             <div class="hud-panel">
                 <div class="hud-title">Mission Phase</div>
@@ -45,6 +49,7 @@
             </div>
         </div>
 
+        </section>
         <!-- Map -->
         <div id="map"></div>
 
@@ -59,11 +64,10 @@
         </div>
 
         <!-- Story Panel -->
-        <div id="story-panel">
-            <button id="close-panel" aria-label="Close panel"></button>
-            <h3 id="panel-title"></h3>
+        <section id="story-panel" role="dialog" aria-label="River story" hidden inert>
+            <header class="story-header"><h3 id="panel-title"></h3><button id="close-panel" aria-label="Close story"></button></header>
             <div id="panel-body"></div>
-        </div>
+        </section>
 
         <!-- Decor -->
         <div id="river-svg" aria-hidden="true">
@@ -81,10 +85,10 @@
         </div>
 
         <!-- Command Terminal -->
-        <div id="terminal-toggle" title="Open Command Terminal">>_</div>
-        <div id="terminal-container">
+        <button id="terminal-toggle" aria-expanded="false" aria-controls="terminal-container">Open command terminal</button>
+        <div id="terminal-container" role="dialog" aria-label="Command terminal" hidden inert>
             <div id="terminal-header">
-                <span>HF-OS v2.4.1 [RESTRICTED]</span>
+                <span>HF-OS v2.4.1</span><button id="terminal-close" aria-label="Close command terminal">×</button>
                 <span id="terminal-clock">00:00:00</span>
             </div>
             <div id="terminal-output">
@@ -94,7 +98,7 @@
             </div>
             <div id="terminal-input-line">
                 <span id="terminal-prompt">root@river:~$</span>
-                <input type="text" id="terminal-input" autocomplete="off" spellcheck="false">
+                <input type="text" id="terminal-input" aria-label="Command" autocomplete="off" spellcheck="false">
             </div>
         </div>
     </div>

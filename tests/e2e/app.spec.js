@@ -5,6 +5,8 @@ test.describe('The Rivers Verse - E2E', () => {
     test.beforeEach(async ({ page }) => {
         await page.goto('/');
         await page.waitForSelector('.leaflet-container');
+        await expect(page.locator('#mission-panel')).toBeHidden();
+        await page.click('#mission-toggle');
     });
 
     test('Loads application and core UI elements', async ({ page }) => {
@@ -25,7 +27,7 @@ test.describe('The Rivers Verse - E2E', () => {
         const terminalContainer = page.locator('#terminal-container');
         await page.click('#terminal-toggle');
         await expect(terminalContainer).toHaveClass(/active/);
-        await page.click('#terminal-toggle');
+        await page.click('#terminal-close');
         await expect(terminalContainer).not.toHaveClass(/active/);
     });
 
@@ -38,7 +40,8 @@ test.describe('The Rivers Verse - E2E', () => {
         // Check initial state (should be paused icon: play triangle)
         await expect(playBtn.locator('svg path')).toBeVisible();
 
-        // Click play
+        // Start beyond the Cairo decision so the short UI test cannot race it.
+        await page.locator('#timeline-slider').fill('50');
         await playBtn.click();
 
         // Icon should change to pause (rectangles)
@@ -46,8 +49,6 @@ test.describe('The Rivers Verse - E2E', () => {
         // We can check count or just use .first() or .nth(0) to verify at least one is visible.
         await expect(playBtn.locator('svg rect').first()).toBeVisible();
 
-        // Wait a bit
-        await page.waitForTimeout(1000);
 
         // Click pause
         await playBtn.click();

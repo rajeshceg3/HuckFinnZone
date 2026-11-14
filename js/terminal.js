@@ -34,6 +34,8 @@ export default class CommandTerminal {
 
     setupListeners() {
         this.els.toggle.addEventListener('click', () => this.toggle());
+        document.getElementById('terminal-close').addEventListener('click', () => { if(this.isOpen) this.toggle(); });
+        document.addEventListener('close-terminal', () => { if(this.isOpen) this.toggle(); });
 
         // Keyboard shortcut (~)
         document.addEventListener('keydown', (e) => {
@@ -73,8 +75,13 @@ export default class CommandTerminal {
 
     toggle() {
         this.isOpen = !this.isOpen;
+        this.els.container.hidden = !this.isOpen;
+        this.els.container.inert = !this.isOpen;
+        this.els.toggle.setAttribute('aria-expanded', String(this.isOpen));
         this.els.container.classList.toggle('active', this.isOpen);
+        if (!this.isOpen) document.getElementById('mission-toggle').focus();
         if (this.isOpen) {
+            document.dispatchEvent(new Event('close-mission'));
             this.els.input.focus();
         }
     }

@@ -1,0 +1,52 @@
+/* The river stays visible. Status and playback are deliberate, on-demand tools. */
+[hidden] { display:none !important; }
+button, input { touch-action: manipulation; }
+button:focus-visible, input:focus-visible, a:focus-visible {outline:3px solid #ee9b00;outline-offset:3px}
+#mission-toggle {position:absolute;z-index:1100;left:16px;top:16px;min-height:44px;padding:0 15px;display:flex;gap:22px;align-items:center;background:var(--hud-bg);color:var(--hud-text);border:1px solid var(--hud-accent);border-left:3px solid var(--hud-accent);font:700 14px var(--font-mono);cursor:pointer}
+#mission-panel {position:absolute;z-index:1200;left:16px;top:72px;width:360px;max-width:calc(100% - 32px);max-height:calc(100dvh - 104px);overflow:auto;box-sizing:border-box;background:var(--hud-bg);color:var(--hud-text);border:1px solid var(--hud-accent);padding:0 16px 16px;scrollbar-width:thin}
+.mission-header {position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;background:#1b2226;margin:0 -16px 12px;padding:8px 12px 8px 16px;border-bottom:1px solid var(--hud-border)}
+.mission-header h2 {font:700 16px var(--font-mono);margin:0}
+#mission-close,#terminal-close {width:44px;height:44px;flex-shrink:0;background:transparent;border:1px solid var(--hud-border);color:var(--hud-text);font-size:24px;cursor:pointer}
+#hud-overlay {position:static;gap:0;pointer-events:auto}
+.hud-panel {min-width:0;box-shadow:none;backdrop-filter:none;background:transparent;padding:14px 0;border:0;border-bottom:1px solid var(--hud-border);transform:none;animation:none;overflow-wrap:anywhere}
+.hud-row {gap:10px;align-items:flex-start}.status-indicator{flex-shrink:0;margin-top:5px}
+#timeline-control {position:static;transform:none;animation:none;width:100%;max-width:none;box-sizing:border-box;border-radius:0;padding:18px 0;gap:12px;box-shadow:none;backdrop-filter:none;background:transparent}
+#play-pause-btn {width:44px;height:44px;flex-shrink:0}
+#timeline-slider {min-width:0;height:44px;background:linear-gradient(var(--hud-border),var(--hud-border)) center/100% 6px no-repeat}
+#terminal-toggle {position:static;width:100%;height:auto;min-height:44px;padding:10px;box-shadow:none;font-size:13px;border-radius:0}
+#story-panel {inset:80px 16px 34px auto;width:400px;max-width:calc(100% - 32px);height:auto;max-height:calc(100dvh - 114px);padding:0 24px 24px;transition:none;display:none;scrollbar-width:thin}
+#story-panel.active {display:block;right:16px}
+.story-header {position:sticky;top:0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 0;background:var(--panel-bg);z-index:1}
+#story-panel h3 {font-size:26px;margin:9px 0;overflow-wrap:anywhere}
+#close-panel {position:relative;top:auto;right:auto;width:44px;height:44px;flex-shrink:0;opacity:1}
+#close-panel::before,#close-panel::after {left:21px;top:12px}
+#panel-body {font-size:17px;line-height:1.65;overflow-wrap:anywhere}
+#terminal-container {inset:80px 16px 34px auto;width:500px;max-width:calc(100% - 32px);height:auto;max-height:calc(100dvh - 114px);box-sizing:border-box;transform:none;transition:none;display:none}
+#terminal-container.active {display:flex}
+#terminal-header {gap:8px;flex-wrap:wrap}#terminal-header #terminal-close {order:3}
+#terminal-clock {font-size:11px}#terminal-input-line {gap:6px;align-items:center}#terminal-prompt{font-size:11px;margin:0}#terminal-input {min-width:0;min-height:44px;width:0;font-size:16px}
+.log-entry {overflow-wrap:anywhere}
+.leaflet-control-attribution {font-size:9px!important;max-width:calc(100vw - 12px);box-sizing:border-box;line-height:1.4!important;background:rgba(255,255,255,.9)!important}
+.pursuit-marker {pointer-events:none!important}
+.journey-marker::before {content:'';position:absolute;inset:-14px;border-radius:50%}
+.decision-content {box-sizing:border-box;max-height:calc(100dvh - 32px);overflow:auto;padding:24px;width:calc(100% - 32px)}
+.decision-content h2 {font-size:20px;overflow-wrap:anywhere}.decision-btn {min-height:44px}.sim-actions {flex-wrap:wrap}.sim-output{overflow-wrap:anywhere}
+@media(max-width:600px){#mission-toggle{left:12px;top:12px}#mission-panel{left:12px;top:68px;max-width:calc(100% - 24px)}#story-panel,#terminal-container{inset:68px 12px 34px auto;max-width:calc(100% - 24px);max-height:calc(100dvh - 102px)}#story-panel.active{right:12px}#story-panel{padding:0 18px 20px}}
+
+.sim-btn-trigger {min-height:44px;background:transparent;border:1px solid var(--hud-accent);font-family:var(--font-mono);color:var(--hud-text);margin:0;cursor:pointer}
+
+#story-panel{bottom:auto;height:auto}
+#terminal-container{color:#58c4c6}
+#terminal-input{color:#58c4c6}
+.log-system{color:#a9c9c9;opacity:1}
+.log-error{color:#ff9b87}
+#mission-panel {background:#202629}
+#story-panel {backdrop-filter:none;background:#fff}
+.story-header {background:#fff}
+.model-note {font:13px/1.5 var(--font-mono);color:#b9d0d0}
+#decision-modal:not(.active){display:none}
+
+
+/* Keep WebGL in its own composited group. Opaque chrome otherwise leaves stale
+   occlusion rectangles on accelerated Chromium; no map style/camera changes. */
+#map {opacity:.999}
